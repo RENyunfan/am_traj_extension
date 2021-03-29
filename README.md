@@ -54,12 +54,13 @@ Then just include the header file in your `cpp`  files
 You can freely use the `shared_ptr` in your code and classes.
 
 ```cpp
+// Creat the shared_ptr
 order7::AmTraj::Ptr am_ptr_7;
 order5::AmTraj::Ptr am_ptr_5;
-
+// Reset memory
 am_ptr_5.reset(new order5::AmTraj);
 am_ptr_7.reset(new order7::AmTraj);
-
+// Init parameters
 am_ptr_7->init(op_7.weight_T, op_7.weight_acc, op_7.weight_jerk, op_7.weight_snap, op_7.max_v, op_7.max_a, op_7.max_it, op_7.eps);
 am_ptr_5->init(op_5.weight_T, op_5.weight_acc,
                op_5.weight_jerk, op_5.max_v, op_5.max_a, op_5.max_it, op_5.eps);
@@ -69,5 +70,10 @@ Trajectory traj_5,traj_7;
 traj_7=  am_ptr_7->genOptimalTrajDTC(waypts, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0));
 ```
 
+# 3 Tips
 
+* We found that  the weight of minimum snap will cause the entire optimizer to fall into a local minimum. We suggest the `wSnap` to be a small value, even 0.
 
+* Some tricks: the 5-th order can calculate relative fast, I found that the solution of 5-th order durations can work well in 7-th order. 
+
+  
