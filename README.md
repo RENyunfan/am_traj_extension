@@ -76,4 +76,6 @@ traj_7=  am_ptr_7->genOptimalTrajDTC(waypts, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(
 
 * Some tricks: the 5-th order can calculate relative fast, I found that the solution of 5-th order durations can work well in 7-th order. 
 
+* There may be bugs in this package, please contact me with email~ Thanks! n(\*≧▽≦\*)n
+
   
