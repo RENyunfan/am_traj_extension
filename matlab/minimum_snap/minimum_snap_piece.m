@@ -1,0 +1,1 @@
+syms p v a j s alpha beta gamma omega
