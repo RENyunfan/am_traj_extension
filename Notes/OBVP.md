@@ -175,6 +175,17 @@ $$
 S^*(t) = \left(\begin{array}{c} \frac{\alpha \,t^4}{8}+\frac{\beta \,t^3}{6}+\frac{\gamma \,t^2}{2}+\omega \,t+j_{0}\\ \frac{\alpha \,t^5}{40}+\frac{\beta \,t^4}{24}+\frac{\gamma \,t^3}{6}+\frac{\omega \,t^2}{2}+j_{0}\,t+a_{0}\\ \frac{\alpha \,t^6}{240}+\frac{\beta \,t^5}{120}+\frac{\gamma \,t^4}{24}+\frac{\omega \,t^3}{6}+\frac{j_{0}\,t^2}{2}+a_{0}\,t+v_{0}\\ \frac{\alpha \,t^7}{1680}+\frac{\beta \,t^6}{720}+\frac{\gamma \,t^5}{120}+\frac{\omega \,t^4}{24}+\frac{j_{0}\,t^3}{6}+\frac{a_{0}\,t^2}{2}+v_{0}\,t+p_{0} \end{array}\right)
 $$
 
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=\left(\begin{array}{c}
+\frac{8\,p_f }{t^4 }-\frac{8\,j_0 }{t^4 }\\
+\frac{24\,j_0 }{t^3 }-\frac{24\,p_f }{t^3 }\\
+\frac{12\,p_f }{t^2 }-\frac{12\,j_0 }{t^2 }\\
+\frac{4\,j_0 }{t}-\frac{4\,p_f }{t}
+\end{array}\right)
+$$
 
 # 3 固定位置和速度
 
@@ -190,6 +201,12 @@ $$
 $$
 J = \int_0^T [\rho + s^2(t)]\mathrm dt
 $$
+需要注意的是，我们的代价函数通常由两部分组成
+$$
+J  = cost_p + cost_f
+$$
+其中$cost_p$表示2过程代价，例如我们的代价函数就是过程代价。除此之外通常还有终端代价，在我们的costfunc中为0。
+
 其中$s$表示snap。根据庞特里亚金极小值原理，设$\vec\lambda = (\lambda_1, \lambda_2,\lambda_3,\lambda_4)$，并定义哈密顿函数$H(s,j,\lambda)$:
 $$
 \begin{aligned}
@@ -198,26 +215,20 @@ H(s,j,\lambda) &= s^2+\rho + \vec\lambda^Tf_s\\
 
 \end{aligned}
 $$
-那么由极小值原理可以得到固定的变量满足
+那么由极小值原理可以得到变量满足
 $$
-\dot{\vec\lambda} = -\nabla_SH (S^*,s^*,\vec\lambda)\\
-\implies [\lambda_1,\lambda_2]= (0,-\lambda_1)
+\dot{\vec\lambda} = -\nabla_SH (S^*,s^*,\vec\lambda)= (0,-\lambda_1,-\lambda_2,-\lambda_3)
 $$
-对于自由变量，庞特里亚金极小值原理有一个新的约束，称为横截条件（Transversal Condition）
+对于自由变量，庞特里亚金极小值原理有一个新的约束，称为横截条件（Transversal Condition）【注意横截条件只针对终止时间T成立】，其中$h$表示终端代价，因此在我们的问题中均为0
 $$
-\dot \lambda_i(T) = \frac{\part h}{\part x_i}(T)
+ \lambda_i(T) = \frac{\part h}{\part x_i}(T) = 0
 $$
-我们需要将哈密顿函数对状态求导\frac{1}{2}\alpha t^3 - \frac{1}{2}\beta t^2-\gamma t-\omega
+我们需要将哈密顿函数对状态求导
 $$
-\dot\lambda_3 = \frac{\partial H}{\part a} = \lambda_2\\
-\dot\lambda_4 = \frac{\partial H}{\part j} = \lambda_3\\
+\lambda_2(T) = \frac{\partial H}{\part v} = 0\\
+\lambda_3(T) = \frac{\partial H}{\part a} = 0\\
+\lambda_4(T) = \frac{\partial H}{\part j} = 0\\
 $$
-那么就有
-$$
-\vec{\dot \lambda} = [0,-\lambda_1,\lambda_2,\lambda_3];
-$$
-
-
 其中$s^*$表示最优的控制输入（snap）$S^*(t)$则表示最优状态轨迹。上述公式求解可以得到
 $$
 \vec\lambda(t) = 
@@ -225,7 +236,7 @@ $$
 \begin{matrix}
  -6\alpha\\
 6\alpha t+2\beta\\
- 3\alpha t^2 + 2\beta t + 2\gamma\\
+ -3\alpha t^2 - 2\beta t - 2\gamma\\
  \alpha t^3 + \beta^2 + 2\gamma t+ 2\omega
 \end{matrix}
 \right]
@@ -235,7 +246,7 @@ $$
 \begin{aligned}
 s^*(t)& = \arg\min_JH(S^*(t),s^*(t),\lambda(t))\\
 &= \frac{-1}{2}\lambda_4\\
-& =- \frac{1}{2}\alpha t^3 - \frac{1}{2}\beta t^2-\gamma t-\omega
+& = -\frac{1}{2}\alpha t^3 - \frac{1}{2}\beta t^2-\gamma t-\omega
 
 \end{aligned}
 $$
@@ -243,3 +254,22 @@ $$
 $$
 S^*(t) = \left(\begin{array}{c} \frac{\alpha \,t^4}{8}+\frac{\beta \,t^3}{6}+\frac{\gamma \,t^2}{2}+\omega \,t+j_{0}\\ \frac{\alpha \,t^5}{40}+\frac{\beta \,t^4}{24}+\frac{\gamma \,t^3}{6}+\frac{\omega \,t^2}{2}+j_{0}\,t+a_{0}\\ \frac{\alpha \,t^6}{240}+\frac{\beta \,t^5}{120}+\frac{\gamma \,t^4}{24}+\frac{\omega \,t^3}{6}+\frac{j_{0}\,t^2}{2}+a_{0}\,t+v_{0}\\ \frac{\alpha \,t^7}{1680}+\frac{\beta \,t^6}{720}+\frac{\gamma \,t^5}{120}+\frac{\omega \,t^4}{24}+\frac{j_{0}\,t^3}{6}+\frac{a_{0}\,t^2}{2}+v_{0}\,t+p_{0} \end{array}\right)
 $$
+
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=
+\left(\begin{array}{c} \frac{160\,v_{f}}{t^5}-\frac{40\,j_{0}}{t^4}-\frac{120\,p_{f}}{t^4}-\frac{160\,a_{0}}{t^5}\\ \frac{360\,a_{0}}{t^4}+\frac{96\,j_{0}}{t^3}+\frac{264\,p_{f}}{t^3}-\frac{360\,v_{f}}{t^4}\\ \frac{120\,v_{f}}{t^3}-\frac{36\,j_{0}}{t^2}-\frac{84\,p_{f}}{t^2}-\frac{120\,a_{0}}{t^3}\\ \frac{20\,a_{0}}{t^2}+\frac{8\,j_{0}}{t}+\frac{12\,p_{f}}{t}-\frac{20\,v_{f}}{t^2} \end{array}\right)
+$$
+
+# 4 只固定位置、速度和加速度
+
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=
+\left(\begin{array}{c} \frac{360\,p_{f}}{t^4}-\frac{120\,j_{0}}{t^4}-\frac{960\,a_{0}}{t^5}-\frac{2400\,v_{0}}{t^6}-\frac{1440\,v_{f}}{t^5}+\frac{2400\,v_{f}}{t^6}\\ \frac{1800\,a_{0}}{t^4}+\frac{240\,j_{0}}{t^3}-\frac{600\,p_{f}}{t^3}+\frac{4320\,v_{0}}{t^5}+\frac{2520\,v_{f}}{t^4}-\frac{4320\,v_{f}}{t^5}\\ \frac{132\,p_{f}}{t^2}-\frac{72\,j_{0}}{t^2}-\frac{480\,a_{0}}{t^3}-\frac{1080\,v_{0}}{t^4}-\frac{600\,v_{f}}{t^3}+\frac{1080\,v_{f}}{t^4}\\ \frac{60\,a_{0}}{t^2}+\frac{12\,j_{0}}{t}-\frac{12\,p_{f}}{t}+\frac{120\,v_{0}}{t^3}+\frac{60\,v_{f}}{t^2}-\frac{120\,v_{f}}{t^3} \end{array}\right)
+$$
+
