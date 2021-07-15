@@ -1,4 +1,59 @@
+[toc]
+
 # Optimal Boundary Value Problem for Polynomial of order 7
+
+# 0 总结
+
+最优状态轨迹
+$$
+S^*(t) = \left(\begin{array}{c} \frac{\alpha \,t^4}{8}+\frac{\beta \,t^3}{6}+\frac{\gamma \,t^2}{2}+\omega \,t+j_{0}\\ \frac{\alpha \,t^5}{40}+\frac{\beta \,t^4}{24}+\frac{\gamma \,t^3}{6}+\frac{\omega \,t^2}{2}+j_{0}\,t+a_{0}\\ \frac{\alpha \,t^6}{240}+\frac{\beta \,t^5}{120}+\frac{\gamma \,t^4}{24}+\frac{\omega \,t^3}{6}+\frac{j_{0}\,t^2}{2}+a_{0}\,t+v_{0}\\ \frac{\alpha \,t^7}{1680}+\frac{\beta \,t^6}{720}+\frac{\gamma \,t^5}{120}+\frac{\omega \,t^4}{24}+\frac{j_{0}\,t^3}{6}+\frac{a_{0}\,t^2}{2}+v_{0}\,t+p_{0} \end{array}\right)
+$$
+
+# 1 完全固定
+
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=
+\left(\begin{array}{c} 33600\,p_{0}-33600\,j_{f}+16800\,a_{f}\,t+16800\,t\,v_{0}+3360\,a_{0}\,t^2+280\,j_{0}\,t^3+280\,p_{f}\,t^3-3360\,t^2\,v_{f}\\ 50400\,j_{f}\,t-50400\,p_{0}\,t-5400\,a_{0}\,t^3-24480\,a_{f}\,t^2-480\,j_{0}\,t^4-360\,p_{f}\,t^4-25920\,t^2\,v_{0}+4680\,t^3\,v_{f}\\ 1200\,a_{0}\,t^4+4680\,a_{f}\,t^3+120\,j_{0}\,t^5-10080\,j_{f}\,t^2+10080\,p_{0}\,t^2+60\,p_{f}\,t^5+5400\,t^3\,v_{0}-840\,t^4\,v_{f}\\ 840\,j_{f}\,t^3-360\,a_{f}\,t^4-16\,j_{0}\,t^6-120\,a_{0}\,t^5-840\,p_{0}\,t^3-4\,p_{f}\,t^6-480\,t^4\,v_{0}+60\,t^5\,v_{f} \end{array}\right)
+$$
+
+## 2 释放jerk
+
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=
+\left(\begin{array}{c} \frac{360\,p_{f}}{t^4}-\frac{120\,j_{0}}{t^4}-\frac{960\,a_{0}}{t^5}-\frac{2400\,v_{0}}{t^6}-\frac{1440\,v_{f}}{t^5}+\frac{2400\,v_{f}}{t^6}\\ \frac{1800\,a_{0}}{t^4}+\frac{240\,j_{0}}{t^3}-\frac{600\,p_{f}}{t^3}+\frac{4320\,v_{0}}{t^5}+\frac{2520\,v_{f}}{t^4}-\frac{4320\,v_{f}}{t^5}\\ \frac{132\,p_{f}}{t^2}-\frac{72\,j_{0}}{t^2}-\frac{480\,a_{0}}{t^3}-\frac{1080\,v_{0}}{t^4}-\frac{600\,v_{f}}{t^3}+\frac{1080\,v_{f}}{t^4}\\ \frac{60\,a_{0}}{t^2}+\frac{12\,j_{0}}{t}-\frac{12\,p_{f}}{t}+\frac{120\,v_{0}}{t^3}+\frac{60\,v_{f}}{t^2}-\frac{120\,v_{f}}{t^3} \end{array}\right)
+$$
+
+## 3 释放acc和jerk
+
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=
+\left(\begin{array}{c} \frac{160\,v_{f}}{t^5}-\frac{40\,j_{0}}{t^4}-\frac{120\,p_{f}}{t^4}-\frac{160\,a_{0}}{t^5}\\ \frac{360\,a_{0}}{t^4}+\frac{96\,j_{0}}{t^3}+\frac{264\,p_{f}}{t^3}-\frac{360\,v_{f}}{t^4}\\ \frac{120\,v_{f}}{t^3}-\frac{36\,j_{0}}{t^2}-\frac{84\,p_{f}}{t^2}-\frac{120\,a_{0}}{t^3}\\ \frac{20\,a_{0}}{t^2}+\frac{8\,j_{0}}{t}+\frac{12\,p_{f}}{t}-\frac{20\,v_{f}}{t^2} \end{array}\right)
+$$
+
+## 4 只固定p
+
+$$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=\left(\begin{array}{c}
+\frac{8\,p_f }{t^4 }-\frac{8\,j_0 }{t^4 }\\
+\frac{24\,j_0 }{t^3 }-\frac{24\,p_f }{t^3 }\\
+\frac{12\,p_f }{t^2 }-\frac{12\,j_0 }{t^2 }\\
+\frac{4\,j_0 }{t}-\frac{4\,p_f }{t}
+\end{array}\right)
+$$
+
+
 
 # 1 完全定义边界条件
 
@@ -117,6 +172,16 @@ eqn = expand(diff(J,t))
 $$
 \dot S = (a,v,j,s)
 $$
+\left(\begin{array}{c} 
+\alpha\\\beta\\\gamma\\\omega
+\end{array}\right)
+=\left(\begin{array}{c}
+\frac{8\,p_f }{t^4 }-\frac{8\,j_0 }{t^4 }\\
+\frac{24\,j_0 }{t^3 }-\frac{24\,p_f }{t^3 }\\
+\frac{12\,p_f }{t^2 }-\frac{12\,j_0 }{t^2 }\\
+\frac{4\,j_0 }{t}-\frac{4\,p_f }{t}
+\end{array}\right)
+
 代价函数可以写成
 $$
 J = \int_0^T [\rho + s^2(t)]\mathrm dt
@@ -170,7 +235,7 @@ s^*(t)& = \arg\min_JH(S^*(t),s^*(t),\lambda(t))\\
 
 \end{aligned}
 $$
-对最优状态轨迹进行多次积分，即可得到各阶的状态轨迹。
+对最优状态轨迹进行多次积分，即可得到各阶的opy_of_状态轨迹。
 $$
 S^*(t) = \left(\begin{array}{c} \frac{\alpha \,t^4}{8}+\frac{\beta \,t^3}{6}+\frac{\gamma \,t^2}{2}+\omega \,t+j_{0}\\ \frac{\alpha \,t^5}{40}+\frac{\beta \,t^4}{24}+\frac{\gamma \,t^3}{6}+\frac{\omega \,t^2}{2}+j_{0}\,t+a_{0}\\ \frac{\alpha \,t^6}{240}+\frac{\beta \,t^5}{120}+\frac{\gamma \,t^4}{24}+\frac{\omega \,t^3}{6}+\frac{j_{0}\,t^2}{2}+a_{0}\,t+v_{0}\\ \frac{\alpha \,t^7}{1680}+\frac{\beta \,t^6}{720}+\frac{\gamma \,t^5}{120}+\frac{\omega \,t^4}{24}+\frac{j_{0}\,t^3}{6}+\frac{a_{0}\,t^2}{2}+v_{0}\,t+p_{0} \end{array}\right)
 $$
