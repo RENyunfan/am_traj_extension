@@ -30,3 +30,5 @@ BVP + Opt t time consuming  1.209608 us
 CBVP time consuming  11.362139 us
 ```
 
+采用保守时间分配，省略掉第二步，可以把速度提升到9.7us
+
