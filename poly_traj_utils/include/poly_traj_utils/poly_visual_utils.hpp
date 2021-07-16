@@ -80,7 +80,43 @@ public:
         }
 
     }
+    static void publishPieceToMarker(ros::Publisher & pub_, Piece piece,bool opt = false){
+        if(piece.getDuration() <1e-3)
+            return;
+        int id = 0;
+        visualization_msgs::MarkerArray marker_array;
+        visualization_msgs::Marker line_list;
+        line_list.header.frame_id = "world";
+        line_list.header.stamp = ros::Time::now();
+        line_list.ns = "line";
+        line_list.id = id++;
+        line_list.type = visualization_msgs::Marker::LINE_LIST;
+        line_list.scale.x= 0.1;
+        line_list.color.a = 1.0;
+        if(opt)
+            line_list.color.g = 1.0;
+        else
+            line_list.color.r = 1.0;
+        geometry_msgs::Point p;
 
+        vector<Vec3> points = piece.getTraj(0.01);
+
+
+        for( size_t i = 0 ; i < points.size()-1; i++){
+
+            p.x = points[i].x();
+            p.y = points[i].y();
+            p.z = points[i].z();
+            line_list.points.push_back(p);
+            p.x = points[i+1].x();
+            p.y = points[i+1].y();
+            p.z = points[i+1].z();
+            line_list.points.push_back(p);
+            marker_array.markers.push_back(line_list);
+        }
+
+        pub_.publish(marker_array);
+    }
 
     static void publishPieceToPath(ros::Publisher & pub_, Piece piece){
         if(piece.getDuration() <1e-3)
@@ -369,35 +405,5 @@ public:
     }
 };
 
-class TimeConsuming{
-public:
-        TimeConsuming();
-        TimeConsuming(string msg){
-        msg_ = msg;
-        start_t = ros::Time::now();
-    }
-    ~TimeConsuming(){
-        if(!has_shown){
-            ros::Time end_t = ros::Time::now();
-//            ROS_WARN("%s time consuming %lf us.",msg_.c_str(),(double)(end_t - start_t).toNSec()/ 1e3);
-            printf("%s time consuming \033[32m %lf us\033[0m\n",msg_.c_str(),(double)(end_t - start_t).toNSec()/ 1e3);
-        }
-
-    }
-    void start(){
-        start_t = ros::Time::now();
-    }
-
-    void stop(){
-        ros::Time end_t = ros::Time::now();
-        printf("%s time consuming \033[32m %lf us\033[0m\n",msg_.c_str(),(double)(end_t - start_t).toNSec()/ 1e3);
-        has_shown = true;
-    }
-
-private:
-    string msg_;
-    ros::Time start_t;
-    bool has_shown = false;
-};
 
 #endif //SRC_POLY_VISUAL_UTILS_HPP

@@ -64,3 +64,12 @@ target_link_libraries(opt_utils_test
         ${PROJECT_NAME}
         ${THIRD_PARTY}
         )
+
+add_executable(bvp_solver_test
+        Apps/bvp_solver_test.cpp
+        )
+
+target_link_libraries(bvp_solver_test
+        ${PROJECT_NAME}
+        ${THIRD_PARTY}
+        )

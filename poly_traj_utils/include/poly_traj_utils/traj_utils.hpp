@@ -41,6 +41,8 @@ private:
 
     bool had_length_ = false;
     double length_;
+
+
 public:
     Piece() = default;
 
@@ -233,6 +235,33 @@ public:
         // Recover the actual acc
         jerk /= duration * duration * duration;
         return jerk;
+    }
+    // Get the snap at time t in this piece
+    inline Eigen::Vector3d getSnap(double t) const
+    {
+        if(t==-1){
+            t = duration;
+        }
+        // Normalize the time
+        t /= duration;
+        Eigen::Vector3d snap(0.0, 0.0, 0.0);
+        double tn = 1.0;
+        int m = 1;
+        int n = 2;
+        int k = 3;
+        int w = 4;
+        for (int i = order_ - 4; i >= 0; i--)
+        {
+            snap += w * k * m * n * tn * nCoeffMat.col(i);
+            tn *= t;
+            w++;
+            k++;
+            m++;
+            n++;
+        }
+        // Recover the actual acc
+        snap /= duration * duration * duration * duration;
+        return snap;
     }
 
     // Get the boundary condition of this piece
@@ -613,6 +642,8 @@ public:
         }
         return next_position;
     }
+
+
 
 };
 
