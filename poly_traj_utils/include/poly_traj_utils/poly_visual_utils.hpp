@@ -369,35 +369,5 @@ public:
     }
 };
 
-class TimeConsuming{
-public:
-        TimeConsuming();
-        TimeConsuming(string msg){
-        msg_ = msg;
-        start_t = ros::Time::now();
-    }
-    ~TimeConsuming(){
-        if(!has_shown){
-            ros::Time end_t = ros::Time::now();
-//            ROS_WARN("%s time consuming %lf us.",msg_.c_str(),(double)(end_t - start_t).toNSec()/ 1e3);
-            printf("%s time consuming \033[32m %lf us\033[0m\n",msg_.c_str(),(double)(end_t - start_t).toNSec()/ 1e3);
-        }
-
-    }
-    void start(){
-        start_t = ros::Time::now();
-    }
-
-    void stop(){
-        ros::Time end_t = ros::Time::now();
-        printf("%s time consuming \033[32m %lf us\033[0m\n",msg_.c_str(),(double)(end_t - start_t).toNSec()/ 1e3);
-        has_shown = true;
-    }
-
-private:
-    string msg_;
-    ros::Time start_t;
-    bool has_shown = false;
-};
 
 #endif //SRC_POLY_VISUAL_UTILS_HPP
