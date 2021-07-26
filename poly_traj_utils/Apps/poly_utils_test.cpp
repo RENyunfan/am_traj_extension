@@ -5,7 +5,7 @@
 #include "poly_traj_utils/poly_visual_utils.hpp"
 #include "ros/ros.h"
 #include "poly_traj_utils/bvp_solver.h"
-
+#include "poly_traj_utils/scope_timer.hpp"
 Vec3 points[2];
 Vec3 vels[2];
 ros::Publisher traj_snap_pub, traj_opt_pub, end_point_state_pub, start_point_state_pub,

@@ -46,21 +46,21 @@ target_link_libraries(
         ${PROJECT_NAME}
         ${THIRD_PARTY}
 )
-
-add_executable(poly_utils_test
-        Apps/poly_utils_test.cpp
-        )
-
-target_link_libraries(poly_utils_test
-        ${PROJECT_NAME}
-        ${THIRD_PARTY}
-        )
-
-add_executable(opt_utils_test
-        Apps/opt_utils_test.cpp
-        )
-
-target_link_libraries(opt_utils_test
-        ${PROJECT_NAME}
-        ${THIRD_PARTY}
-        )
+#==========================================================
+#add_executable(poly_utils_test
+#        Apps/poly_utils_test.cpp
+#        )
+#
+#target_link_libraries(poly_utils_test
+#        ${PROJECT_NAME}
+#        ${THIRD_PARTY}
+#        )
+#
+#add_executable(opt_utils_test
+#        Apps/opt_utils_test.cpp
+#        )
+#
+#target_link_libraries(opt_utils_test
+#        ${PROJECT_NAME}
+#        ${THIRD_PARTY}
+#        )

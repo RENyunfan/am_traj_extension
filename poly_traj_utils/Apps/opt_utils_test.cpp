@@ -6,6 +6,7 @@
 #include "poly_traj_utils/am_traj_plus.hpp"
 #include "poly_traj_utils/am_traj.hpp"
 #include "poly_traj_utils/poly_visual_utils.hpp"
+#include "poly_traj_utils/scope_timer.hpp"
 
 using namespace std;
 typedef Eigen::Matrix<double, 3, 3> Mat33;
