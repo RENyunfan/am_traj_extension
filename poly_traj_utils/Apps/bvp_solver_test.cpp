@@ -3,13 +3,13 @@
 //
 
 #include "poly_traj_utils/traj_utils.hpp"
-#include "poly_traj_utils/obvp_solver2.hpp"
+#include "poly_traj_utils/obvp_solver.hpp"
 #include "poly_traj_utils/poly_visual_utils.hpp"
 #include "iostream"
 #include "poly_traj_utils/scope_timer.hpp"
 
 using namespace std;
-ObvpSolver2 solver(1000, 7, 5);
+ObvpSolver solver(1000, 7, 5);
 Vec3 points[2];
 Vec3 vels[2];
 int idx = 0;
@@ -23,7 +23,7 @@ void wayPoint_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
 
     if (points[idx].z() < 1e-3)
         points[idx].z() = 2.5;
-    Vec3 W(1, 0, 0);
+    Vec3 W(5, 0, 0);
     vels[idx] = R * W;
     if (idx) {
         Piece cur_p2;
@@ -38,12 +38,12 @@ void wayPoint_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
         StatePVAJ start_state, end_state;
         start_state << points[0], vels[0], 0, 0, 0, 0, 0, 0;
         end_state << points[1], vels[1], 0, 0, 0, 0, 0, 0;
-        Piece pie ;
+        Piece pie;
         {
-            TimeConsuming t_("OPT",1e2);
+            TimeConsuming t_("OPT", 1e2);
             int cnt = 1e2;
-            while (cnt --)
-            pie = solver.GenFixPVMinSnapOptT(start_state, end_state);
+            while (cnt--)
+                pie = solver.GenFixStateMinSnapOptT(start_state, end_state, FIXPV);
 //            pie = solver.GenFixStateMinSnapOptT(start_state, end_state);
         }
         double vel = pie.getMaxVelRate();
@@ -130,8 +130,8 @@ int main(int argc, char **argv) {
 //    double t = solver.GetLastTstar();
 //    double cost = solver.GetLastCost();
 //    printf("t = %lf, cost = %lf\n", t,cost);
-    Piece pie = solver.GenFixPVMinSnapOptT(start,goal);
-    double t = solver.GetLastTstar();
+//    Piece pie = solver.GenFixPVMinSnapOptT(start,goal);
+//    double t = solver.GetLastTstar();
 //    double cur_t = 0, acc_cost = 0;
 //    double max_v = 0.0;
 //    while (cur_t <= t) {
@@ -139,13 +139,24 @@ int main(int argc, char **argv) {
 //        acc_cost+=cur_snap.squaredNorm()*0.001;
 //        cur_t += 0.001;
 //    }
-    for(t = 2;t<5;t+=0.01){
-        Piece pie = solver.GenFixPVMinSnap(start,goal,t,true);
-        fmt::print("{},{};\n",solver.GetLastCost(), t);//3.2550270956988907
+//    acc_cost+=t*1000;
+//    fmt::print("{},{};\n",acc_cost, solver.GetLastCost());//3.2550270956988907
+    Piece pie = solver.GenFixStateMinSnapOptT(start, goal,FIXP);
+    fmt::print("best t = {}\n",solver.GetLastTstar());//3.2550270956988907
+    for (double t = 1; t < 3; t += 0.05) {
+        Piece pie = solver.GenFixStateMinSnap(start, goal, t, FIXP,true);
+        double cur_t = 0, acc_cost = 0;
+        double max_v = 0.0;
+        while (cur_t <= t) {
+            Vec3 cur_snap = pie.getSnap(cur_t);
+            acc_cost += cur_snap.squaredNorm() * 0.001;
+            cur_t += 0.001;
+        }
+        acc_cost += t * 1000;
+        fmt::print("[{},{},{}],\n",t, solver.GetLastCost(), acc_cost);//3.2550270956988907
     }
 
 
-    cout<<pie.checkMaxVelRate(2.3)<<endl;
 
 
 

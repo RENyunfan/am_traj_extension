@@ -86,6 +86,48 @@ c_7\\c_6\\c_5\\c_4\\c_3\\c_2\\c_1\\c_0\\
 \end{array}\right)\\
 \mathbf d = M\mathbf p
 $$
+考虑到我们需要求的代价函数为
+$$
+J = \int_o^T p^{(4)}(t)^2\mathrm d t
+$$
+因此可以将代价函数写成矩阵的形式考虑到核函数
+$$
+\begin{aligned}
+&f(t)=\sum_{i} p_{i} t^{i} \\
+&\Rightarrow f^{(4)}(t)=\sum_{i \geq 4} i(i-1)(i-2)(i-3) t^{i-4} p_{i} \\
+&\Rightarrow\left(f^{(4)}(t)\right)^{2}=\sum_{i \geq 4, l \geq 4} i(i-1)(i-2)(i-3) l(l-1)(l-2)(l-3) t^{i+l-8} p_{i} p_{l} \\
+&\Rightarrow J(T)=\int_{T_{j-1}}^{T_{j}}\left(f^{4}(t)\right)^{2} d t=\sum_{i \geq 4, l \geq 4} \frac{i(i-1)(i-2)(i-3) j(l-1)(l-2)(l-3)}{i+l-7}\left(T_{j}^{i+l-7}-T_{j-1}^{i+l-7}\right) p_{i} p_{l} \\
+&\Rightarrow J(T)=\int_{T_{j-1}}^{T_{j}}\left(f^{4}(t)\right)^{2} d t
+\end{aligned}
+$$
+因此Smoothness的代价函数可以写成
+$$
+J = p^TQp
+$$
+其中Q可以表示为
+$$
+\left[\begin{array}{cc}
+&\vdots \\
+\cdots & \frac{i(i-1)(i-2)(i-3) l(l-1)(l-2)(l-3)}{i+l-7} T^{i+l-7} & \ldots
+\\
+&\vdots&
+\end{array}\right]
+$$
+对于7阶多项式，Minsnap的Q可以表示为
+$$
+Q=\left(\begin{array}{cccccccc}
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0\\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0\\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0\\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0\\
+0 & 0 & 0 & 0 & 576\,T & 1440\,T^2  & 2880\,T^3  & 5040\,T^4 \\
+0 & 0 & 0 & 0 & 1440\,T^2  & 4800\,T^3  & 10800\,T^4  & 20160\,T^5 \\
+0 & 0 & 0 & 0 & 2880\,T^3  & 10800\,T^4  & 25920\,T^5  & 50400\,T^6 \\
+0 & 0 & 0 & 0 & 5040\,T^4  & 20160\,T^5  & 50400\,T^6  & 100800\,T^7 
+\end{array}\right)
+$$
+
+
 因此代价函数可以表示为
 $$
 J = \mathbf d_{fp}C^TM^{-T}QM^{-1}C\mathbf d_{fp}+\rho \sum T_i

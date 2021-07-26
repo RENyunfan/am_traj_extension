@@ -67,7 +67,7 @@ private:
             coeffsGradT(8) = (1411200 * p_0 * p_f - 705600 * p_0.square() - 705600 * p_f.square()).sum();
         } else if (type == FIXPV) {
 
-            coeffsGradT(0) = rho_;
+            coeffsGradT(0) =  rho_;
             coeffsGradT(2) = (-12.0 * j_0.square()).sum();
             coeffsGradT(3) = (-264.0 * a_0 * j_0).sum();
             coeffsGradT(4) = (-1404 * a_0.square() - 1152 * j_0 * v_0 - 360 * j_0 * v_f).sum();
@@ -77,16 +77,18 @@ private:
             coeffsGradT(7) = (78624 * p_f * v_0 - 30240 * p_0 * v_f - 78624 * p_0 * v_0 +
                               30240 * p_f * v_f).sum();
             coeffsGradT(8) = (63504 * p_0 * p_f - 127008 * p_0.square() - 63504 * p_f.square()).sum();
-        } else if (type == FIXP) {
-            coeffsGradT(0) = rho_;
+        }
+        else if(type == FIXP){
+            coeffsGradT(0) =  rho_;
             coeffsGradT(2) = (-7.0 * j_0.square()).sum();
             coeffsGradT(3) = (-84.0 * a_0 * j_0).sum();
-            coeffsGradT(4) = (-189 * a_0.square() - 252 * j_0 * v_0).sum();
-            coeffsGradT(5) = (336 * j_0 * p_f - 336 * j_0 * p_0 - 1008 * a_0 * v_0).sum();
-            coeffsGradT(6) = (-1260 * v_0.square() - 1260 * a_0 * p_0 + 1260 * a_0 * p_f).sum();
+            coeffsGradT(4) = (-189 * a_0.square() - 252 * j_0 * v_0 ).sum();
+            coeffsGradT(5) = (336 * j_0 * p_f  - 336 * j_0 * p_0 - 1008 * a_0 * v_0).sum();
+            coeffsGradT(6) = (-1260 * v_0.square()  - 1260 * a_0 * p_0 + 1260 * a_0 * p_f).sum();
             coeffsGradT(7) = (3024 * p_f * v_0 - 3024 * p_0 * v_0).sum();
             coeffsGradT(8) = (3528 * p_0 * p_f - 1764 * p_0.square() - 1764 * p_f.square()).sum();
-        } else {
+        }
+        else {
             fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "Error, undefined bvp type!\n");
         }
 
@@ -124,20 +126,21 @@ private:
             coeffsSnapObjective(5) = (13104 * p_0 * v_0 + 5040 * p_0 * v_f - 13104 * p_f * v_0 -
                                       5040 * p_f * v_f).sum();
             coeffsSnapObjective(6) = (9072 * p_0.square() - 18144 * p_0 * p_f + 9072 * p_f.square()).sum();
-        } else if (type == FIXP) {
+        }
+        else if(type == FIXP){
             coeffsSnapObjective(0) = (7 * j_0.square()).sum();
             coeffsSnapObjective(1) = (42 * a_0 * j_0).sum();
-            coeffsSnapObjective(2) = (63 * a_0.square() + 84 * j_0 * v_0).sum();
+            coeffsSnapObjective(2) = (63 * a_0.square() + 84 * j_0 * v_0 ).sum();
             coeffsSnapObjective(3) = (252 * a_0 * v_0 + 84 * j_0 * p_0 - 84 * j_0 * p_f).sum();
-            coeffsSnapObjective(4) = (252 * v_0.square() + 252 * a_0 * p_0 - 252 * a_0 * p_f).sum();
-            coeffsSnapObjective(5) = (504 * p_0 * v_0 - 504 * p_f * v_0).sum();
+            coeffsSnapObjective(4) = (252 * v_0.square()  +252 * a_0 * p_0 - 252 * a_0 * p_f).sum();
+            coeffsSnapObjective(5) = (504 * p_0 * v_0 - 504 * p_f * v_0 ).sum();
             coeffsSnapObjective(6) = (252 * p_0.square() - 504 * p_0 * p_f + 252 * p_f.square()).sum();
         }
 
         for (const double &root : roots) {
 //            fmt::print(fg(fmt::color::light_pink), "Root: {}\n", root);
             double t7 = pow(root, 7);
-            double current = rho_ * root + RootFinder::polyVal(coeffsSnapObjective, root) / t7;
+            double current = rho_ * root + RootFinder::polyVal(coeffsSnapObjective, root) / t7 ;
             if (current < cost) {
                 tau = root;
                 cost = current;
@@ -239,7 +242,7 @@ public:
             coeffsSnapObjective(5) = (13104 * p_0 * v_0 + 5040 * p_0 * v_f - 13104 * p_f * v_0 -
                                       5040 * p_f * v_f).sum();
             coeffsSnapObjective(6) = (9072 * p_0.square() - 18144 * p_0 * p_f + 9072 * p_f.square()).sum();
-        } else {
+        }else {
             fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "Error, undefined bvp type!\n");
         }
 
@@ -247,6 +250,15 @@ public:
         double t7 = pow(t, 7);
         double current = rho_ * t + RootFinder::polyVal(coeffsSnapObjective, t) / t7;
         return current;
+    }
+
+    inline Piece GenFixStateMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state) {
+        double t = CalcOptimalDuration(start_state, end_state, FULLFIX);
+        if (t < 0) {
+            Piece empt;
+            return empt;
+        }
+        return GenFixStateMinSnap(start_state, end_state, t, false);
     }
 
     inline Piece GenFixStateMinSnapOptTC(StatePVAJ &start_state, StatePVAJ &end_state) {
@@ -333,17 +345,216 @@ public:
         return check_pie;
     }
 
+//    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost = false) {
+//        test_cnt_++;
+//        Eigen::Array3d p_0 = start_state.head(3);
+//        Eigen::Array3d v_0 = start_state.segment(3, 3);
+//        Eigen::Array3d a_0 = start_state.segment(6, 3);
+//        Eigen::Array3d j_0 = start_state.tail(3);
+//
+//        Eigen::Array3d p_f = end_state.head(3);
+//        Eigen::Array3d v_f = end_state.segment(3, 3);
+//        Eigen::Array3d a_f = end_state.segment(6, 3);
+//        Eigen::Array3d j_f = end_state.tail(3);
+//        double tvec[8];
+//        DynamicMat out_mat(3, 8);
+//        tvec[0] = 1;
+//        for (size_t i = 1; i < 8; i++) {
+//            tvec[i] = pow(t, i);
+//        }
+//        double J = 0.0;
+//        for (size_t i = 0; i < 3; i++) {
+//            Eigen::Vector4d delta_pvaj = Eigen::Vector4d(
+//                    p_f[i] - p_0[i] - v_0[i] * t - 1.0 / 2.0f * a_0[i] * tvec[2] -
+//                    1.0 / 6.0f * j_0[i] * tvec[3],
+//                    v_f[i] - v_0[i] - a_0[i] * t - 1.0 / 2.0f * j_0[i] * tvec[2],
+//                    a_f[i] - a_0[i] - j_0[i] * t,
+//                    j_f[i] - j_0[i]);
+//
+//            Eigen::MatrixXd tmat(4, 4);
+//            tmat << -33600, 16800 * tvec[1], -3360 * tvec[2], 280 * tvec[3],
+//                    25200 * tvec[1], -12240 * tvec[2], 2340 * tvec[3], -180 * tvec[4],
+//                    -10080 * tvec[2], 4680 * tvec[3], -840 * tvec[4], 60 * tvec[5],
+//                    840 * tvec[3], -360 * tvec[4], 60 * tvec[5], -4 * tvec[6];
+//
+//            Eigen::Vector4d abyw = tmat * delta_pvaj / tvec[7];
+//            double aa = abyw[0], bb = abyw[1], yy = abyw[2], ww = abyw[3];
+//            out_mat.row(i)[0] = aa / 1680.0f;
+//            out_mat.row(i)[1] = bb / 360.0f;
+//            out_mat.row(i)[2] = yy / 120.0f;
+//            out_mat.row(i)[3] = ww / 24.0f;
+//            out_mat.row(i)[4] = j_0[i] / 6.0f;
+//            out_mat.row(i)[5] = a_0[i] / 2.0f;
+//            out_mat.row(i)[6] = v_0[i];
+//            out_mat.row(i)[7] = p_0[i];
+//            if (calc_cost) {
+//                J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
+//                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 +
+//                     2.0 * bb * ww * tvec[3] / 3.0 +
+//                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t;
+//            }
+//
+//        }
+//        if (calc_cost) {
+//            last_cost_ = J + rho_ * t;
+////            fmt::print(fg(fmt::color::yellow_green) | fmt::emphasis::bold, "Acc j = {}\n", last_cost_);
+//        }
+//
+//        Piece out_pie(t, out_mat);
+//        return out_pie;
+//    }
+//
+//
+//    inline Piece GenFixPVMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state) {
+//        double t = CalcOptimalDuration(start_state, end_state, FIXPV);
+//        if (t < 0) {
+//            Piece empt;
+//            return empt;
+//        }
+//        return GenFixPVMinSnap(start_state, end_state, t, false);
+//    }
+//
+//    inline Piece GenFixPVMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost = false) {
+//        test_cnt_++;
+//        Eigen::Array3d p_0 = start_state.head(3);
+//        Eigen::Array3d v_0 = start_state.segment(3, 3);
+//        Eigen::Array3d a_0 = start_state.segment(6, 3);
+//        Eigen::Array3d j_0 = start_state.tail(3);
+//
+//        Eigen::Array3d p_f = end_state.head(3);
+//        Eigen::Array3d v_f = end_state.segment(3, 3);
+//        Eigen::Array3d a_f = end_state.segment(6, 3);
+//        Eigen::Array3d j_f = end_state.tail(3);
+//        double tvec[8];
+//        DynamicMat out_mat(3, 8);
+//        tvec[0] = 1;
+//        for (size_t i = 1; i < 8; i++) {
+//            tvec[i] = pow(t, i);
+//        }
+//        double J = 0.0;
+//        for (size_t i = 0; i < 3; i++) {
+//
+////            double aa = (720 * p_f[i]) / tvec[7] - (720 * p_0[i]) / tvec[7] - (180 * j_0[i]) / (7 * tvec[4]) -
+////                        (1200 * a_0[i]) / (7 * tvec[5]) - (3720 * v_0[i]) / (7 * tvec[6]) -
+////                        (1320 * v_f[i]) / (7 * tvec[6]);
+////            double bb = (14760 * a_0[i]) / (49 * tvec[4]) + (1920 * j_0[i]) / (49 * tvec[3]) +
+////                        (9360 * p_0[i]) / (7 * tvec[6]) - (9360 * p_f[i]) / (7 * tvec[6]) +
+////                        (47520 * v_0[i]) / (49 * tvec[5]) + (18000 * v_f[i]) / (49 * tvec[5]);
+////            double yy =
+////                    (1800 * p_f[i]) / (7 * tvec[5]) - (30 * j_0[i]) / (49 * tvec[2]) - (1800 * p_0[i]) / (7 * tvec[5]) -
+////                    (2160 * a_0[i]) / (49 * tvec[3]) - (8460 * v_0[i]) / (49 * tvec[4]) -
+////                    (4140 * v_f[i]) / (49 * tvec[4]);
+////            double ww = (360 * p_f[i]) / (7 * tvec[4]) - (300 * j_0[i]) / (49 * t) - (360 * p_0[i]) / (7 * tvec[4]) -
+////                        (1020 * a_0[i]) / (49 * tvec[2]) - (2280 * v_0[i]) / (49 * tvec[3]) -
+////                        (240 * v_f[i]) / (49 * tvec[3]);
+//
+//            double aa = (672*a_0[i])/tvec[5] + (84*j_0[i])/tvec[4] + (3024*p_0[i])/tvec[7] - (3024*p_f[i])/tvec[7] + (2184*v_0[i])/tvec[6] + (840*v_f[i])/tvec[6];
+//            double bb = (3276*p_f[i])/tvec[6] - (96*j_0[i])/tvec[3] - (3276*p_0[i])/tvec[6] - (738*a_0[i])/tvec[4] - (2376*v_0[i])/tvec[5] - (900*v_f[i])/tvec[5];
+//            double yy =(468*a_0[i])/tvec[3] + (66*j_0[i])/tvec[2] + (2016*p_0[i])/tvec[5] - (2016*p_f[i])/tvec[5] + (1476*v_0[i])/tvec[4] + (540*v_f[i])/tvec[4];
+//            double ww = (252*p_f[i])/tvec[4] - (12*j_0[i])/t - (252*p_0[i])/tvec[4] - (66*a_0[i])/tvec[2] - (192*v_0[i])/tvec[3] - (60*v_f[i])/tvec[3];
+//
+//            out_mat.row(i)[0] = aa / 1680.0f;
+//            out_mat.row(i)[1] = bb / 360.0f;
+//            out_mat.row(i)[2] = yy / 120.0f;
+//            out_mat.row(i)[3] = ww / 24.0f;
+//            out_mat.row(i)[4] = j_0[i] / 6.0f;
+//            out_mat.row(i)[5] = a_0[i] / 2.0f;
+//            out_mat.row(i)[6] = v_0[i];
+//            out_mat.row(i)[7] = p_0[i];
+//            if (calc_cost) {
+//                J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
+//                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 +
+//                     2.0 * bb * ww * tvec[3] / 3.0 +
+//                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t;
+//            }
+//        }
+//        if (calc_cost) {
+//            last_cost_ = J + rho_ * t;
+////            fmt::print(fg(fmt::color::yellow_green) | fmt::emphasis::bold, "Acc j = {}\n", last_cost_);
+//        }
+//        Piece out_pie(t, out_mat);
+//        return out_pie;
+//    }
+//
+//    inline Piece GenFixPMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state) {
+//        double t = CalcOptimalDuration(start_state, end_state, FIXP);
+//        if (t < 0) {
+//            Piece empt;
+//            return empt;
+//        }
+//        return GenFixPMinSnap(start_state, end_state, t, false);
+//    }
+//
+//    inline Piece GenFixPMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost = false) {
+//        test_cnt_++;
+//        Eigen::Array3d p_0 = start_state.head(3);
+//        Eigen::Array3d v_0 = start_state.segment(3, 3);
+//        Eigen::Array3d a_0 = start_state.segment(6, 3);
+//        Eigen::Array3d j_0 = start_state.tail(3);
+//
+//        Eigen::Array3d p_f = end_state.head(3);
+//        Eigen::Array3d v_f = end_state.segment(3, 3);
+//        Eigen::Array3d a_f = end_state.segment(6, 3);
+//        Eigen::Array3d j_f = end_state.tail(3);
+//        double tvec[8];
+//        DynamicMat out_mat(3, 8);
+//        tvec[0] = 1;
+//        for (size_t i = 1; i < 8; i++) {
+//            tvec[i] = pow(t, i);
+//        }
+//        double J = 0.0;
+//        for (size_t i = 0; i < 3; i++) {
+//
+////            double aa = (720 * p_f[i]) / tvec[7] - (720 * p_0[i]) / tvec[7] - (180 * j_0[i]) / (7 * tvec[4]) -
+////                        (1200 * a_0[i]) / (7 * tvec[5]) - (3720 * v_0[i]) / (7 * tvec[6]) -
+////                        (1320 * v_f[i]) / (7 * tvec[6]);
+////            double bb = (14760 * a_0[i]) / (49 * tvec[4]) + (1920 * j_0[i]) / (49 * tvec[3]) +
+////                        (9360 * p_0[i]) / (7 * tvec[6]) - (9360 * p_f[i]) / (7 * tvec[6]) +
+////                        (47520 * v_0[i]) / (49 * tvec[5]) + (18000 * v_f[i]) / (49 * tvec[5]);
+////            double yy =
+////                    (1800 * p_f[i]) / (7 * tvec[5]) - (30 * j_0[i]) / (49 * tvec[2]) - (1800 * p_0[i]) / (7 * tvec[5]) -
+////                    (2160 * a_0[i]) / (49 * tvec[3]) - (8460 * v_0[i]) / (49 * tvec[4]) -
+////                    (4140 * v_f[i]) / (49 * tvec[4]);
+////            double ww = (360 * p_f[i]) / (7 * tvec[4]) - (300 * j_0[i]) / (49 * t) - (360 * p_0[i]) / (7 * tvec[4]) -
+////                        (1020 * a_0[i]) / (49 * tvec[2]) - (2280 * v_0[i]) / (49 * tvec[3]) -
+////                        (240 * v_f[i]) / (49 * tvec[3]);
+//
+//            double aa =(42*a_0[i])/tvec[5] + (14*j_0[i])/tvec[4] + (84*p_0[i])/tvec[7] - (84*p_f[i])/tvec[7] + (84*v_0[i])/tvec[6];
+//            double bb = (126*p_f[i])/tvec[6] - (21*j_0[i])/tvec[3] - (126*p_0[i])/tvec[6] - (63*a_0[i])/tvec[4] - (126*v_0[i])/tvec[5];
+//            double yy =(63*a_0[i])/tvec[3] + (21*j_0[i])/tvec[2] + (126*p_0[i])/tvec[5] - (126*p_f[i])/tvec[5] + (126*v_0[i])/tvec[4];
+//            double ww = (42*p_f[i])/tvec[4] - (7*j_0[i])/t - (42*p_0[i])/tvec[4] - (21*a_0[i])/tvec[2] - (42*v_0[i])/tvec[3];
+//
+//            out_mat.row(i)[0] = aa / 1680.0f;
+//            out_mat.row(i)[1] = bb / 360.0f;
+//            out_mat.row(i)[2] = yy / 120.0f;
+//            out_mat.row(i)[3] = ww / 24.0f;
+//            out_mat.row(i)[4] = j_0[i] / 6.0f;
+//            out_mat.row(i)[5] = a_0[i] / 2.0f;
+//            out_mat.row(i)[6] = v_0[i];
+//            out_mat.row(i)[7] = p_0[i];
+//            if (calc_cost) {
+//                J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
+//                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 +
+//                     2.0 * bb * ww * tvec[3] / 3.0 +
+//                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t;
+//            }
+//        }
+//        if (calc_cost) {
+//            last_cost_ = J + rho_ * t;
+////            fmt::print(fg(fmt::color::yellow_green) | fmt::emphasis::bold, "Acc j = {}\n", last_cost_);
+//        }
+//        Piece out_pie(t, out_mat);
+//        return out_pie;
+//    }
     inline Piece GenFixStateMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state, int type = FULLFIX) {
         double t = CalcOptimalDuration(start_state, end_state, type);
         if (t < 0) {
             Piece empt;
             return empt;
         }
-        return GenFixStateMinSnap(start_state, end_state, t, type, false);
+        return GenFixStateMinSnap(start_state, end_state, t, type,false);
     }
-
-    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, int type = FULLFIX,
-                                    bool calc_cost = false) {
+    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t,int type = FULLFIX, bool calc_cost = false){
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
         Eigen::Array3d a_0 = start_state.segment(6, 3);
@@ -359,7 +570,7 @@ public:
         for (size_t i = 1; i < 8; i++) {
             tvec[i] = pow(t, i);
         }
-        double J = 0.0, aa, bb, yy, ww;
+        double J = 0.0,aa,bb,yy,ww;
         for (size_t i = 0; i < 3; i++) {
 
             switch (type) {
@@ -378,38 +589,27 @@ public:
                             840 * tvec[3], -360 * tvec[4], 60 * tvec[5], -4 * tvec[6];
 
                     Eigen::Vector4d abyw = tmat * delta_pvaj / tvec[7];
-                    aa = abyw[0];
-                    bb = abyw[1];
-                    yy = abyw[2];
-                    ww = abyw[3];
+                    aa = abyw[0]; bb = abyw[1]; yy = abyw[2]; ww = abyw[3];
                     break;
                 }
                 case FIXP: {
-                    aa = (42 * a_0[i]) / tvec[5] + (14 * j_0[i]) / tvec[4] + (84 * p_0[i]) / tvec[7] -
-                         (84 * p_f[i]) / tvec[7] + (84 * v_0[i]) / tvec[6];
-                    bb = (126 * p_f[i]) / tvec[6] - (21 * j_0[i]) / tvec[3] - (126 * p_0[i]) / tvec[6] -
-                         (63 * a_0[i]) / tvec[4] - (126 * v_0[i]) / tvec[5];
-                    yy = (63 * a_0[i]) / tvec[3] + (21 * j_0[i]) / tvec[2] + (126 * p_0[i]) / tvec[5] -
-                         (126 * p_f[i]) / tvec[5] + (126 * v_0[i]) / tvec[4];
-                    ww = (42 * p_f[i]) / tvec[4] - (7 * j_0[i]) / t - (42 * p_0[i]) / tvec[4] -
-                         (21 * a_0[i]) / tvec[2] - (42 * v_0[i]) / tvec[3];
+                     aa =(42*a_0[i])/tvec[5] + (14*j_0[i])/tvec[4] + (84*p_0[i])/tvec[7] - (84*p_f[i])/tvec[7] + (84*v_0[i])/tvec[6];
+                     bb = (126*p_f[i])/tvec[6] - (21*j_0[i])/tvec[3] - (126*p_0[i])/tvec[6] - (63*a_0[i])/tvec[4] - (126*v_0[i])/tvec[5];
+                     yy =(63*a_0[i])/tvec[3] + (21*j_0[i])/tvec[2] + (126*p_0[i])/tvec[5] - (126*p_f[i])/tvec[5] + (126*v_0[i])/tvec[4];
+                     ww = (42*p_f[i])/tvec[4] - (7*j_0[i])/t - (42*p_0[i])/tvec[4] - (21*a_0[i])/tvec[2] - (42*v_0[i])/tvec[3];
 
                     break;
                 }
                 case FIXPV: {
-                     aa = (672 * a_0[i]) / tvec[5] + (84 * j_0[i]) / tvec[4] + (3024 * p_0[i]) / tvec[7] -
-                                (3024 * p_f[i]) / tvec[7] + (2184 * v_0[i]) / tvec[6] + (840 * v_f[i]) / tvec[6];
-                     bb = (3276 * p_f[i]) / tvec[6] - (96 * j_0[i]) / tvec[3] - (3276 * p_0[i]) / tvec[6] -
-                                (738 * a_0[i]) / tvec[4] - (2376 * v_0[i]) / tvec[5] - (900 * v_f[i]) / tvec[5];
-                     yy = (468 * a_0[i]) / tvec[3] + (66 * j_0[i]) / tvec[2] + (2016 * p_0[i]) / tvec[5] -
-                                (2016 * p_f[i]) / tvec[5] + (1476 * v_0[i]) / tvec[4] + (540 * v_f[i]) / tvec[4];
-                     ww = (252 * p_f[i]) / tvec[4] - (12 * j_0[i]) / t - (252 * p_0[i]) / tvec[4] -
-                                (66 * a_0[i]) / tvec[2] - (192 * v_0[i]) / tvec[3] - (60 * v_f[i]) / tvec[3];
+                     aa =(42*a_0[i])/tvec[5] + (14*j_0[i])/tvec[4] + (84*p_0[i])/tvec[7] - (84*p_f[i])/tvec[7] + (84*v_0[i])/tvec[6];
+                     bb = (126*p_f[i])/tvec[6] - (21*j_0[i])/tvec[3] - (126*p_0[i])/tvec[6] - (63*a_0[i])/tvec[4] - (126*v_0[i])/tvec[5];
+                     yy =(63*a_0[i])/tvec[3] + (21*j_0[i])/tvec[2] + (126*p_0[i])/tvec[5] - (126*p_f[i])/tvec[5] + (126*v_0[i])/tvec[4];
+                     ww = (42*p_f[i])/tvec[4] - (7*j_0[i])/t - (42*p_0[i])/tvec[4] - (21*a_0[i])/tvec[2] - (42*v_0[i])/tvec[3];
 
                     break;
                 }
                 default: {
-                    fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "Error, undefined bvp type!\n");
+
                 }
 
             }

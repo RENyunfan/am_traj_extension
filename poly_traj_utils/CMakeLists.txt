@@ -41,7 +41,7 @@ add_library(${PROJECT_NAME}
         src/obvp_solver.cpp
         src/poly_visual_utils.cpp
         src/am_traj.cpp
-        src/bvp_solver.cpp
+
         )
 target_link_libraries(
         ${PROJECT_NAME}
