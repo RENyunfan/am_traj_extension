@@ -23,7 +23,7 @@ void wayPoint_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
 
     if (points[idx].z() < 1e-3)
         points[idx].z() = 2.5;
-    Vec3 W(5, 0, 0);
+    Vec3 W(1, 0, 0);
     vels[idx] = R * W;
     if (idx) {
         Piece cur_p2;
@@ -43,7 +43,7 @@ void wayPoint_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
             TimeConsuming t_("OPT",1e2);
             int cnt = 1e2;
             while (cnt --)
-            pie = solver.GenFixPVMinSnap(start_state, end_state,4);
+            pie = solver.GenFixPVMinSnapOptT(start_state, end_state);
 //            pie = solver.GenFixStateMinSnapOptT(start_state, end_state);
         }
         double vel = pie.getMaxVelRate();
@@ -130,16 +130,21 @@ int main(int argc, char **argv) {
 //    double t = solver.GetLastTstar();
 //    double cost = solver.GetLastCost();
 //    printf("t = %lf, cost = %lf\n", t,cost);
-    Piece pie = solver.GenFixStateMinSnapOptT(start,goal);
+    Piece pie = solver.GenFixPVMinSnapOptT(start,goal);
     double t = solver.GetLastTstar();
-    double cur_t = 0, acc_cost = 0;
-    double max_v = 0.0;
-    while (cur_t <= t) {
-        Vec3 cur_snap = pie.getSnap(cur_t);
-        acc_cost+=cur_snap.squaredNorm()*0.001;
-        cur_t += 0.001;
+//    double cur_t = 0, acc_cost = 0;
+//    double max_v = 0.0;
+//    while (cur_t <= t) {
+//        Vec3 cur_snap = pie.getSnap(cur_t);
+//        acc_cost+=cur_snap.squaredNorm()*0.001;
+//        cur_t += 0.001;
+//    }
+    for(t = 2;t<5;t+=0.01){
+        Piece pie = solver.GenFixPVMinSnap(start,goal,t,true);
+        fmt::print("{},{};\n",solver.GetLastCost(), t);//3.2550270956988907
     }
-    fmt::print("Acc cost 2 = {}, calc cost = {}\n",acc_cost+1000*4, solver.GetLastCost());
+
+
     cout<<pie.checkMaxVelRate(2.3)<<endl;
 
 

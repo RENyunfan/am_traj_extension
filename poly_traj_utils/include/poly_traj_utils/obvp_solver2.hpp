@@ -17,6 +17,8 @@ using namespace Eigen;
 using namespace std;
 
 typedef Eigen::Matrix<double, 12, 1> StatePVAJ;
+#define FULLFIX 1
+#define FIXPV 2
 
 class ObvpSolver2 {
 private:
@@ -31,23 +33,26 @@ public:
     ObvpSolver2(int rho, double vel_max, double acc_max) : rho_(rho), vel_max_(vel_max), acc_max_(acc_max) {
 //        printf(" -- [BVP SLOVER2]: \033[32m OBVP_SOLVER2 INIT SUCCESS. \033[0m:rho = %lf, max_v = %lf, max_a = %lf.\n", rho,vel_max_,acc_max_);
         fmt::print(" -- [ObvpSolver2]: ");
-        fmt::print(fg(fmt::color::yellow_green),"INIT SUCCESS!");
-        fmt::print(" With rho = {}, max_v = {}, max_a = {}\n", rho,vel_max,acc_max);
+        fmt::print(fg(fmt::color::yellow_green), "INIT SUCCESS!");
+        fmt::print(" With rho = {}, max_v = {}, max_a = {}\n", rho, vel_max, acc_max);
     };
 
     ~ObvpSolver2() {};
 
     typedef shared_ptr<ObvpSolver2> Ptr;
 
-    inline double GetLastCost() {
+    inline double GetLastCostStar() {
         return cost_star_;
     }
 
+    inline double GetLastCost() {
+        return last_cost_;
+    }
     inline double GetLastTstar() {
         return t_star_;
     }
 
-    inline double CalcFixPVOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state){
+    inline double CalcFixPVOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state) {
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
         Eigen::Array3d a_0 = start_state.segment(6, 3);
@@ -61,7 +66,8 @@ public:
 
     }
 
-                                           inline double CalcFixStateOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state) {
+    inline double CalcOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state, int type) {
+
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
         Eigen::Array3d a_0 = start_state.segment(6, 3);
@@ -74,20 +80,38 @@ public:
 
         Eigen::VectorXd coeffsGradT(9);
 
-        coeffsGradT(0) = rho_;
-        coeffsGradT(2) = (-8 * j_0 * j_f - 16 * j_0.square() - 16 * j_f.square()).sum();
-        coeffsGradT(3) = (240 * a_f * j_0 - 240 * a_0 * j_f - 480 * a_0 * j_0 + 480 * a_f * j_f).sum();
-        coeffsGradT(4) = (5040 * a_0 * a_f - 2880 * j_0 * v_0 - 2160 * j_0 * v_f - 2160 * j_f * v_0 - 2880 * j_f * v_f -
-                          3600 * a_0.square() - 3600 * a_f.square()).sum();
-        coeffsGradT(5) = (37440 * a_f * v_0 - 37440 * a_0 * v_f - 43200 * a_0 * v_0 + 43200 * a_f * v_f -
-                          6720 * j_0 * p_0 + 6720 * j_0 * p_f - 6720 * j_f * p_0 + 6720 * j_f * p_f).sum();
-        coeffsGradT(6) = (100800 * a_0 * p_f - 100800 * a_0 * p_0 + 100800 * a_f * p_0 - 100800 * a_f * p_f -
-                          244800 * v_0 * v_f - 129600 * v_0.square() - 129600 * v_f.square()).sum();
-        coeffsGradT(7) = (604800 * p_f * v_0 - 604800 * p_0 * v_f - 604800 * p_0 * v_0 + 604800 * p_f * v_f).sum();
-        coeffsGradT(8) = (1411200 * p_0 * p_f - 705600 * p_0.square() - 705600 * p_f.square()).sum();
+        if (type == FULLFIX) {
+            coeffsGradT(0) = rho_;
+            coeffsGradT(2) = (-8 * j_0 * j_f - 16 * j_0.square() - 16 * j_f.square()).sum();
+            coeffsGradT(3) = (240 * a_f * j_0 - 240 * a_0 * j_f - 480 * a_0 * j_0 + 480 * a_f * j_f).sum();
+            coeffsGradT(4) = (5040 * a_0 * a_f - 2880 * j_0 * v_0 - 2160 * j_0 * v_f - 2160 * j_f * v_0 -
+                              2880 * j_f * v_f -
+                              3600 * a_0.square() - 3600 * a_f.square()).sum();
+            coeffsGradT(5) = (37440 * a_f * v_0 - 37440 * a_0 * v_f - 43200 * a_0 * v_0 + 43200 * a_f * v_f -
+                              6720 * j_0 * p_0 + 6720 * j_0 * p_f - 6720 * j_f * p_0 + 6720 * j_f * p_f).sum();
+            coeffsGradT(6) = (100800 * a_0 * p_f - 100800 * a_0 * p_0 + 100800 * a_f * p_0 - 100800 * a_f * p_f -
+                              244800 * v_0 * v_f - 129600 * v_0.square() - 129600 * v_f.square()).sum();
+            coeffsGradT(7) = (604800 * p_f * v_0 - 604800 * p_0 * v_f - 604800 * p_0 * v_0 + 604800 * p_f * v_f).sum();
+            coeffsGradT(8) = (1411200 * p_0 * p_f - 705600 * p_0.square() - 705600 * p_f.square()).sum();
+        } else if (type == FIXPV) {
+            coeffsGradT(0) = 49 * rho_;
+            coeffsGradT(2) = (-3660.0 * j_0.square()).sum();
+            coeffsGradT(3) = (-107400.0 * a_0 * j_0).sum();
+            coeffsGradT(4) = (-613440 * a_0.square() - 512640 * j_0 * v_0 - 190440 * j_0 * v_f).sum();
+            coeffsGradT(5) = (937440 * j_0 * p_f - 1982880 * a_0 * v_f - 937440 * j_0 * p_0 -
+                              5254560 * a_0 * v_0).sum();
+            coeffsGradT(6) = (-10573200 * v_0.square() - 8010000 * v_0 * v_f - 1526400 * v_f.square() -
+                              9046800 * a_0 * p_0 + 9046800 * a_0 * p_f).sum();
+            coeffsGradT(7) = (34987680 * p_f * v_0 - 13275360 * p_0 * v_f - 34987680 * p_0 * v_0 +
+                              13275360 * p_f * v_f).sum();
+            coeffsGradT(8) = (56306880 * p_0 * p_f - 28153440 * p_0.square() - 28153440 * p_f.square()).sum();
+        } else {
+            fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "Error, undefined bvp type!\n");
+        }
+
 
         std::set<double> roots = RootFinder::solvePolynomial(coeffsGradT, DBL_EPSILON, DBL_MAX, 1e-6);
-        if(roots.empty()){
+        if (roots.empty()) {
             return -1;
         }
         bool result = false;
@@ -95,21 +119,32 @@ public:
         double cost = DBL_MAX;
 
         VectorXd coeffsSnapObjective(7);
-        coeffsSnapObjective(0) = (8 * j_0 * j_f + 16 * j_0.square() + 16 * j_f.square()).sum();
-        coeffsSnapObjective(1) = (240 * a_0 * j_0 + 120 * a_0 * j_f - 120 * a_f * j_0 - 240 * a_f * j_f).sum();
-        coeffsSnapObjective(2) = (960 * j_0 * v_0 - 1680 * a_0 * a_f + 720 * j_0 * v_f + 720 * j_f * v_0 +
-                                  960 * j_f * v_f + 1200 * a_0.square() + 1200 * a_f.square()).sum();
-        coeffsSnapObjective(3) = (10800 * a_0 * v_0 + 9360 * a_0 * v_f - 9360 * a_f * v_0 - 10800 * a_f * v_f +
-                                  1680 * j_0 * p_0 - 1680 * j_0 * p_f + 1680 * j_f * p_0 - 1680 * j_f * p_f).sum();
-        coeffsSnapObjective(4) = (20160 * a_0 * p_0 - 20160 * a_0 * p_f - 20160 * a_f * p_0 + 20160 * a_f * p_f +
-                                  48960 * v_0 * v_f + 25920 * v_0.square() + 25920 * v_f.square()).sum();
-        coeffsSnapObjective(5) = (100800 * p_0 * v_0 + 100800 * p_0 * v_f - 100800 * p_f * v_0 -
-                                  100800 * p_f * v_f).sum();
-        coeffsSnapObjective(6) = (100800 * p_0.square() - 201600 * p_0 * p_f + 100800 * p_f.square()).sum();
+        if ((type == FULLFIX)) {
+            coeffsSnapObjective(0) = (8 * j_0 * j_f + 16 * j_0.square() + 16 * j_f.square()).sum();
+            coeffsSnapObjective(1) = (240 * a_0 * j_0 + 120 * a_0 * j_f - 120 * a_f * j_0 - 240 * a_f * j_f).sum();
+            coeffsSnapObjective(2) = (960 * j_0 * v_0 - 1680 * a_0 * a_f + 720 * j_0 * v_f + 720 * j_f * v_0 +
+                                      960 * j_f * v_f + 1200 * a_0.square() + 1200 * a_f.square()).sum();
+            coeffsSnapObjective(3) = (10800 * a_0 * v_0 + 9360 * a_0 * v_f - 9360 * a_f * v_0 - 10800 * a_f * v_f +
+                                      1680 * j_0 * p_0 - 1680 * j_0 * p_f + 1680 * j_f * p_0 - 1680 * j_f * p_f).sum();
+            coeffsSnapObjective(4) = (20160 * a_0 * p_0 - 20160 * a_0 * p_f - 20160 * a_f * p_0 + 20160 * a_f * p_f +
+                                      48960 * v_0 * v_f + 25920 * v_0.square() + 25920 * v_f.square()).sum();
+            coeffsSnapObjective(5) = (100800 * p_0 * v_0 + 100800 * p_0 * v_f - 100800 * p_f * v_0 -
+                                      100800 * p_f * v_f).sum();
+            coeffsSnapObjective(6) = (100800 * p_0.square() - 201600 * p_0 * p_f + 100800 * p_f.square()).sum();
+        } else if ((type == FIXPV)) {
+            coeffsSnapObjective(0) = (3660 * j_0.square()).sum();
+            coeffsSnapObjective(1) = (53700 * a_0 * j_0).sum();
+            coeffsSnapObjective(2) = (204480 * a_0.square() + 170880 * j_0 * v_0 + 63480 * j_0 * v_f).sum();
+            coeffsSnapObjective(3) = (1313640 * a_0 * v_0 + 495720 * a_0 * v_f + 234360 * j_0 * p_0 -234360 * j_0 * p_f).sum();
+            coeffsSnapObjective(4) = (2114640 * v_0.square() + 1602000 * v_0 * v_f + 305280 * v_f.square() + 1809360 * a_0 * p_0 - 1809360 * a_0 * p_f).sum();
+            coeffsSnapObjective(5) = (5831280 * p_0 * v_0 + 2212560 * p_0 * v_f - 5831280 * p_f * v_0 - 2212560 * p_f * v_f).sum();
+            coeffsSnapObjective(6) = (4021920 * p_0.square() - 8043840 * p_0 * p_f + 4021920 * p_f.square()).sum();
+        }
+
         for (const double &root : roots) {
 //            fmt::print(fg(fmt::color::light_pink), "Root: {}\n", root);
             double t7 = pow(root, 7);
-            double current = rho_ * root + RootFinder::polyVal(coeffsSnapObjective, root) / t7;
+            double current = rho_ * root + RootFinder::polyVal(coeffsSnapObjective, root) / t7/49;
             if (current < cost) {
                 tau = root;
                 cost = current;
@@ -150,21 +185,30 @@ public:
         return current;
     }
 
-    inline void PrintState(StatePVAJ & state_){
-        fmt::print(fg(fmt::color::light_yellow),"-- [State]:\n");
-        fmt::print("    position:({0:.2f},{1:.2f},{2:.2f})\n", state_[0],state_[1],state_[2]);
-        fmt::print("    velocity:({0:.2f},{1:.2f},{2:.2f})\n", state_[3],state_[4],state_[5]);
-        fmt::print("    acceleration:({0:.2f},{1:.2f},{2:.2f})\n", state_[6],state_[7],state_[8]);
-        fmt::print("    jerk:({0:.2f},{1:.2f},{2:.2f})\n", state_[9],state_[10],state_[11]);
+    inline void PrintState(StatePVAJ &state_) {
+        fmt::print(fg(fmt::color::light_yellow), "-- [State]:\n");
+        fmt::print("    position:({0:.2f},{1:.2f},{2:.2f})\n", state_[0], state_[1], state_[2]);
+        fmt::print("    velocity:({0:.2f},{1:.2f},{2:.2f})\n", state_[3], state_[4], state_[5]);
+        fmt::print("    acceleration:({0:.2f},{1:.2f},{2:.2f})\n", state_[6], state_[7], state_[8]);
+        fmt::print("    jerk:({0:.2f},{1:.2f},{2:.2f})\n", state_[9], state_[10], state_[11]);
     }
 
     inline Piece GenFixStateMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state) {
-        double t = CalcFixStateOptimalDuration(start_state, end_state);
-        if(t<0){
+        double t = CalcOptimalDuration(start_state, end_state, FULLFIX);
+        if (t < 0) {
             Piece empt;
             return empt;
         }
         return GenFixStateMinSnap(start_state, end_state, t, true);
+    }
+
+    inline Piece GenFixPVMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state) {
+        double t = CalcOptimalDuration(start_state, end_state, FIXPV);
+        if (t < 0) {
+            Piece empt;
+            return empt;
+        }
+        return GenFixPVMinSnap(start_state, end_state, t, true);
     }
 
     inline bool CheckPiece(Piece &pie_in) {
@@ -186,7 +230,7 @@ public:
 
         // 2) Gen unconstrained primitive as global minimum
         Piece global_min = GenFixStateMinSnapOptT(start_state, end_state);
-        if(global_min.empty()){
+        if (global_min.empty()) {
             return global_min;
         }
         // 3) If feasible, return
@@ -200,9 +244,9 @@ public:
         tc_2 = std::chrono::high_resolution_clock::now();
 #endif
         // 4) Unfeasible, try bisection, first find feasible solution
-        double test_t = t_star_*2, t_fea= t_star_*2;
+        double test_t = t_star_ * 2, t_fea = t_star_ * 2;
         double scale_ratio = 2;
-        int maxit =100;
+        int maxit = 100;
         while (maxit--) {
 //            printf("test_t %lf\n", test_t);
             test_t *= scale_ratio;
@@ -214,7 +258,7 @@ public:
 //                printf("max_v =  %lf, max_a = %lf\n",check_pie.getMaxVelRate(),check_pie.getMaxAccRate());
             }
         }
-        if(maxit == 0){
+        if (maxit == 0) {
             Piece emp;
             return emp;
         }
@@ -229,7 +273,7 @@ public:
             double t_now = (t_l + t_r) / 2;
             Piece check_pie = GenFixStateMinSnap(start_state, end_state, t_now);
             if (CheckPiece(check_pie)) {
-                feasible =true;
+                feasible = true;
                 t_r = t_now;
             } else {
                 t_l = t_now;
@@ -276,7 +320,7 @@ public:
         }
     }
 
-    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost=false) {
+    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost = false) {
         test_cnt_++;
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
@@ -318,23 +362,24 @@ public:
             out_mat.row(i)[5] = a_0[i] / 2.0f;
             out_mat.row(i)[6] = v_0[i];
             out_mat.row(i)[7] = p_0[i];
-            if(calc_cost){
+            if (calc_cost) {
                 J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
-                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 + 2.0* bb * ww * tvec[3] / 3.0 +
-                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t ;
+                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 +
+                     2.0 * bb * ww * tvec[3] / 3.0 +
+                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t;
             }
 
         }
-        if(calc_cost){
-            last_cost_ = J+rho_*t;
-            fmt::print(fg(fmt::color::yellow_green)| fmt::emphasis::bold,"Acc j = {}\n", last_cost_);
+        if (calc_cost) {
+            last_cost_ = J + rho_ * t;
+            fmt::print(fg(fmt::color::yellow_green) | fmt::emphasis::bold, "Acc j = {}\n", last_cost_);
         }
 
         Piece out_pie(t, out_mat);
         return out_pie;
     }
 
-    inline Piece GenFixPVMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost =false) {
+    inline Piece GenFixPVMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost = false) {
         test_cnt_++;
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
@@ -354,10 +399,19 @@ public:
         double J = 0.0;
         for (size_t i = 0; i < 3; i++) {
 
-            double aa = (720*p_f[i])/tvec[7] - (720*p_0[i])/tvec[7]-  (180*j_0[i])/(7*tvec[4]) - (1200*a_0[i])/(7*tvec[5]) - (3720*v_0[i])/(7*tvec[6]) - (1320*v_f[i])/(7*tvec[6]);
-            double bb = (14760*a_0[i])/(49*tvec[4]) + (1920*j_0[i])/(49*tvec[3]) + (9360*p_0[i])/(7*tvec[6]) - (9360*p_f[i])/(7*tvec[6]) + (47520*v_0[i])/(49*tvec[5]) + (18000*v_f[i])/(49*tvec[5]);
-            double yy = (1800*p_f[i])/(7*tvec[5]) - (30*j_0[i])/(49*tvec[2]) - (1800*p_0[i])/(7*tvec[5]) - (2160*a_0[i])/(49*tvec[3]) - (8460*v_0[i])/(49*tvec[4]) - (4140*v_f[i])/(49*tvec[4]);
-            double ww = (360*p_f[i])/(7*tvec[4]) - (300*j_0[i])/(49*t) - (360*p_0[i])/(7*tvec[4]) - (1020*a_0[i])/(49*tvec[2]) - (2280*v_0[i])/(49*tvec[3]) - (240*v_f[i])/(49*tvec[3]);
+            double aa = (720 * p_f[i]) / tvec[7] - (720 * p_0[i]) / tvec[7] - (180 * j_0[i]) / (7 * tvec[4]) -
+                        (1200 * a_0[i]) / (7 * tvec[5]) - (3720 * v_0[i]) / (7 * tvec[6]) -
+                        (1320 * v_f[i]) / (7 * tvec[6]);
+            double bb = (14760 * a_0[i]) / (49 * tvec[4]) + (1920 * j_0[i]) / (49 * tvec[3]) +
+                        (9360 * p_0[i]) / (7 * tvec[6]) - (9360 * p_f[i]) / (7 * tvec[6]) +
+                        (47520 * v_0[i]) / (49 * tvec[5]) + (18000 * v_f[i]) / (49 * tvec[5]);
+            double yy =
+                    (1800 * p_f[i]) / (7 * tvec[5]) - (30 * j_0[i]) / (49 * tvec[2]) - (1800 * p_0[i]) / (7 * tvec[5]) -
+                    (2160 * a_0[i]) / (49 * tvec[3]) - (8460 * v_0[i]) / (49 * tvec[4]) -
+                    (4140 * v_f[i]) / (49 * tvec[4]);
+            double ww = (360 * p_f[i]) / (7 * tvec[4]) - (300 * j_0[i]) / (49 * t) - (360 * p_0[i]) / (7 * tvec[4]) -
+                        (1020 * a_0[i]) / (49 * tvec[2]) - (2280 * v_0[i]) / (49 * tvec[3]) -
+                        (240 * v_f[i]) / (49 * tvec[3]);
             out_mat.row(i)[0] = aa / 1680.0f;
             out_mat.row(i)[1] = bb / 360.0f;
             out_mat.row(i)[2] = yy / 120.0f;
@@ -366,15 +420,16 @@ public:
             out_mat.row(i)[5] = a_0[i] / 2.0f;
             out_mat.row(i)[6] = v_0[i];
             out_mat.row(i)[7] = p_0[i];
-            if(calc_cost){
+            if (calc_cost) {
                 J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
-                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 + 2.0* bb * ww * tvec[3] / 3.0 +
-                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t ;
+                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 +
+                     2.0 * bb * ww * tvec[3] / 3.0 +
+                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t;
             }
         }
-        if(calc_cost){
-            last_cost_ = J+rho_*t;
-            fmt::print(fg(fmt::color::yellow_green)| fmt::emphasis::bold,"Acc j = {}\n", last_cost_);
+        if (calc_cost) {
+            last_cost_ = J + rho_ * t;
+//            fmt::print(fg(fmt::color::yellow_green) | fmt::emphasis::bold, "Acc j = {}\n", last_cost_);
         }
         Piece out_pie(t, out_mat);
         return out_pie;
