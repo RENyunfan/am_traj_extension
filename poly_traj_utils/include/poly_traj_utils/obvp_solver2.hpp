@@ -2,35 +2,42 @@
 // Created by yunfan on 2021/3/19.
 //
 
-#ifndef SRC_OBVP_SOLVER_HPP
-#define SRC_OBVP_SOLVER_HPP
+#ifndef SRC_OBVP_SOLVER2_HPP
+#define SRC_OBVP_SOLVER2_HPP
 
 #include "root_finder.hpp"
 #include "traj_utils.hpp"
 #include "Eigen/Dense"
 #include "vector"
 #include "poly_visual_utils.hpp"
-
 #include "scope_timer.hpp"
+#include "fmt/color.h"
 
 using namespace Eigen;
 using namespace std;
 
 typedef Eigen::Matrix<double, 12, 1> StatePVAJ;
 
-class ObvpSolver {
+class ObvpSolver2 {
 private:
     double rho_;
     double vel_max_ = DBL_MAX, acc_max_ = DBL_MAX;
     double t_star_;
-    double cost_star_;
+    double cost_star_, last_cost_;
     int test_cnt_ = 0;
 public:
-    ObvpSolver(int rho) : rho_(rho) {};
+    ObvpSolver2(int rho) : rho_(rho) {};
 
-    ObvpSolver(int rho, double vel_max, double acc_max) : rho_(rho), vel_max_(vel_max), acc_max_(acc_max) {};
+    ObvpSolver2(int rho, double vel_max, double acc_max) : rho_(rho), vel_max_(vel_max), acc_max_(acc_max) {
+//        printf(" -- [BVP SLOVER2]: \033[32m OBVP_SOLVER2 INIT SUCCESS. \033[0m:rho = %lf, max_v = %lf, max_a = %lf.\n", rho,vel_max_,acc_max_);
+        fmt::print(" -- [ObvpSolver2]: ");
+        fmt::print(fg(fmt::color::yellow_green),"INIT SUCCESS!");
+        fmt::print(" With rho = {}, max_v = {}, max_a = {}\n", rho,vel_max,acc_max);
+    };
 
-    ~ObvpSolver() {};
+    ~ObvpSolver2() {};
+
+    typedef shared_ptr<ObvpSolver2> Ptr;
 
     inline double GetLastCost() {
         return cost_star_;
@@ -40,7 +47,21 @@ public:
         return t_star_;
     }
 
-    inline double CalcOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state) {
+    inline double CalcFixPVOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state){
+        Eigen::Array3d p_0 = start_state.head(3);
+        Eigen::Array3d v_0 = start_state.segment(3, 3);
+        Eigen::Array3d a_0 = start_state.segment(6, 3);
+        Eigen::Array3d j_0 = start_state.tail(3);
+
+        Eigen::Array3d p_f = end_state.head(3);
+        Eigen::Array3d v_f = end_state.segment(3, 3);
+        Eigen::Array3d a_f = end_state.segment(6, 3);
+        Eigen::Array3d j_f = end_state.tail(3);
+
+
+    }
+
+                                           inline double CalcFixStateOptimalDuration(StatePVAJ &start_state, StatePVAJ &end_state) {
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
         Eigen::Array3d a_0 = start_state.segment(6, 3);
@@ -66,7 +87,9 @@ public:
         coeffsGradT(8) = (1411200 * p_0 * p_f - 705600 * p_0.square() - 705600 * p_f.square()).sum();
 
         std::set<double> roots = RootFinder::solvePolynomial(coeffsGradT, DBL_EPSILON, DBL_MAX, 1e-6);
-
+        if(roots.empty()){
+            return -1;
+        }
         bool result = false;
         double tau = DBL_MAX;
         double cost = DBL_MAX;
@@ -84,6 +107,7 @@ public:
                                   100800 * p_f * v_f).sum();
         coeffsSnapObjective(6) = (100800 * p_0.square() - 201600 * p_0 * p_f + 100800 * p_f.square()).sum();
         for (const double &root : roots) {
+//            fmt::print(fg(fmt::color::light_pink), "Root: {}\n", root);
             double t7 = pow(root, 7);
             double current = rho_ * root + RootFinder::polyVal(coeffsSnapObjective, root) / t7;
             if (current < cost) {
@@ -126,9 +150,21 @@ public:
         return current;
     }
 
+    inline void PrintState(StatePVAJ & state_){
+        fmt::print(fg(fmt::color::light_yellow),"-- [State]:\n");
+        fmt::print("    position:({0:.2f},{1:.2f},{2:.2f})\n", state_[0],state_[1],state_[2]);
+        fmt::print("    velocity:({0:.2f},{1:.2f},{2:.2f})\n", state_[3],state_[4],state_[5]);
+        fmt::print("    acceleration:({0:.2f},{1:.2f},{2:.2f})\n", state_[6],state_[7],state_[8]);
+        fmt::print("    jerk:({0:.2f},{1:.2f},{2:.2f})\n", state_[9],state_[10],state_[11]);
+    }
+
     inline Piece GenFixStateMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state) {
-        double t = CalcOptimalDuration(start_state, end_state);
-        return GenFixStateMinSnap(start_state, end_state, t);
+        double t = CalcFixStateOptimalDuration(start_state, end_state);
+        if(t<0){
+            Piece empt;
+            return empt;
+        }
+        return GenFixStateMinSnap(start_state, end_state, t, true);
     }
 
     inline bool CheckPiece(Piece &pie_in) {
@@ -137,9 +173,6 @@ public:
         }
         return false;
     }
-
-
-
 
     inline Piece GenFixStateMinSnapOptTC(StatePVAJ &start_state, StatePVAJ &end_state) {
 //#define TIME_CHEAK
@@ -153,10 +186,12 @@ public:
 
         // 2) Gen unconstrained primitive as global minimum
         Piece global_min = GenFixStateMinSnapOptT(start_state, end_state);
-
+        if(global_min.empty()){
+            return global_min;
+        }
         // 3) If feasible, return
         if (CheckPiece(global_min)) {
-//            printf(" \033[32m Reach global minuimum\033[0m\n");
+            printf(" \033[32m Reach global minuimum\033[0m\n");
             return global_min;
         }
         test_cnt_ = 0;
@@ -167,7 +202,8 @@ public:
         // 4) Unfeasible, try bisection, first find feasible solution
         double test_t = t_star_*2, t_fea= t_star_*2;
         double scale_ratio = 2;
-        while (1) {
+        int maxit =100;
+        while (maxit--) {
 //            printf("test_t %lf\n", test_t);
             test_t *= scale_ratio;
             Piece check_pie = GenFixStateMinSnap(start_state, end_state, test_t);
@@ -178,7 +214,10 @@ public:
 //                printf("max_v =  %lf, max_a = %lf\n",check_pie.getMaxVelRate(),check_pie.getMaxAccRate());
             }
         }
-
+        if(maxit == 0){
+            Piece emp;
+            return emp;
+        }
         int max_it = 5;
         double t_l = t_star_, t_r = t_fea;
         Piece check_pie;
@@ -215,6 +254,7 @@ public:
         t_us = (double) dt * 1e6;
         printf("Bisection time consuming \033[32m %lf us\033[0m\n", t_us);
 #endif
+//        printf("max_v =  %lf, max_a = %lf\n",check_pie.getMaxVelRate(),check_pie.getMaxAccRate());
         return check_pie;
     }
 
@@ -236,7 +276,7 @@ public:
         }
     }
 
-    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t) {
+    inline Piece GenFixStateMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost=false) {
         test_cnt_++;
         Eigen::Array3d p_0 = start_state.head(3);
         Eigen::Array3d v_0 = start_state.segment(3, 3);
@@ -278,24 +318,67 @@ public:
             out_mat.row(i)[5] = a_0[i] / 2.0f;
             out_mat.row(i)[6] = v_0[i];
             out_mat.row(i)[7] = p_0[i];
-            J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 12.0 + aa * yy * tvec[5] / 5.0 +
-                 aa * ww * tvec[4] / 4.0
-                 + (bb * bb * tvec[5]) / 20.0 + bb * yy * tvec[4] / 4.0 + bb * ww * tvec[3] / 3.0 +
-                 yy * yy * tvec[3] / 3.0 +
-                 yy * ww * tvec[2] + ww * ww * t;
-//            J += (aa*aa*tvec[9])/576.0 + (aa*bb*tvec[8])/192.0 + aa*yy*tvec[7]/56.0 +
-//                    aa*j_0[i]*tvec[5]/20.0 + aa*ww*tvec[6]/24.0 + (bb*bb*tvec[7])/252.0 +
-//                    bb*yy*tvec[6]/36.0+ bb*j_0[i]*tvec[4]/12.0+  bb*ww*tvec[5]/15.0 +
-//                    yy*yy*tvec[5]/20.0 +yy*j_0[i]*tvec[3]/3.0+ +yy*ww*tvec[4]/4.0+
-//                    j_0[i]*j_0[i]*t +  j_0[i]*ww*tvec[2]  + ww*ww*tvec[3]/3.0;
+            if(calc_cost){
+                J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
+                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 + 2.0* bb * ww * tvec[3] / 3.0 +
+                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t ;
+            }
+
+        }
+        if(calc_cost){
+            last_cost_ = J+rho_*t;
+            fmt::print(fg(fmt::color::yellow_green)| fmt::emphasis::bold,"Acc j = {}\n", last_cost_);
         }
 
         Piece out_pie(t, out_mat);
         return out_pie;
     }
 
+    inline Piece GenFixPVMinSnap(StatePVAJ &start_state, StatePVAJ &end_state, double t, bool calc_cost =false) {
+        test_cnt_++;
+        Eigen::Array3d p_0 = start_state.head(3);
+        Eigen::Array3d v_0 = start_state.segment(3, 3);
+        Eigen::Array3d a_0 = start_state.segment(6, 3);
+        Eigen::Array3d j_0 = start_state.tail(3);
 
-public:
+        Eigen::Array3d p_f = end_state.head(3);
+        Eigen::Array3d v_f = end_state.segment(3, 3);
+        Eigen::Array3d a_f = end_state.segment(6, 3);
+        Eigen::Array3d j_f = end_state.tail(3);
+        double tvec[8];
+        DynamicMat out_mat(3, 8);
+        tvec[0] = 1;
+        for (size_t i = 1; i < 8; i++) {
+            tvec[i] = pow(t, i);
+        }
+        double J = 0.0;
+        for (size_t i = 0; i < 3; i++) {
+
+            double aa = (720*p_f[i])/tvec[7] - (720*p_0[i])/tvec[7]-  (180*j_0[i])/(7*tvec[4]) - (1200*a_0[i])/(7*tvec[5]) - (3720*v_0[i])/(7*tvec[6]) - (1320*v_f[i])/(7*tvec[6]);
+            double bb = (14760*a_0[i])/(49*tvec[4]) + (1920*j_0[i])/(49*tvec[3]) + (9360*p_0[i])/(7*tvec[6]) - (9360*p_f[i])/(7*tvec[6]) + (47520*v_0[i])/(49*tvec[5]) + (18000*v_f[i])/(49*tvec[5]);
+            double yy = (1800*p_f[i])/(7*tvec[5]) - (30*j_0[i])/(49*tvec[2]) - (1800*p_0[i])/(7*tvec[5]) - (2160*a_0[i])/(49*tvec[3]) - (8460*v_0[i])/(49*tvec[4]) - (4140*v_f[i])/(49*tvec[4]);
+            double ww = (360*p_f[i])/(7*tvec[4]) - (300*j_0[i])/(49*t) - (360*p_0[i])/(7*tvec[4]) - (1020*a_0[i])/(49*tvec[2]) - (2280*v_0[i])/(49*tvec[3]) - (240*v_f[i])/(49*tvec[3]);
+            out_mat.row(i)[0] = aa / 1680.0f;
+            out_mat.row(i)[1] = bb / 360.0f;
+            out_mat.row(i)[2] = yy / 120.0f;
+            out_mat.row(i)[3] = ww / 24.0f;
+            out_mat.row(i)[4] = j_0[i] / 6.0f;
+            out_mat.row(i)[5] = a_0[i] / 2.0f;
+            out_mat.row(i)[6] = v_0[i];
+            out_mat.row(i)[7] = p_0[i];
+            if(calc_cost){
+                J += (aa * aa * tvec[7]) / 28.0 + (aa * bb * tvec[6]) / 6.0 + aa * yy * tvec[5] / 5.0 +
+                     aa * ww * tvec[4] / 4.0 + (bb * bb * tvec[5]) / 5.0 + bb * yy * tvec[4] / 2.0 + 2.0* bb * ww * tvec[3] / 3.0 +
+                     yy * yy * tvec[3] / 3.0 + yy * ww * tvec[2] + ww * ww * t ;
+            }
+        }
+        if(calc_cost){
+            last_cost_ = J+rho_*t;
+            fmt::print(fg(fmt::color::yellow_green)| fmt::emphasis::bold,"Acc j = {}\n", last_cost_);
+        }
+        Piece out_pie(t, out_mat);
+        return out_pie;
+    }
 
 };
 

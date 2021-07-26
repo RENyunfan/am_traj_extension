@@ -41,7 +41,7 @@ private:
 
     bool had_length_ = false;
     double length_;
-
+    bool is_empty_{true};
 
 public:
     Piece() = default;
@@ -57,6 +57,7 @@ public:
             nCoeffMat.col(i) = coeffs.col(i) * t;
             t *= dur;
         }
+        is_empty_ = false;
     }
 
     // Constructor from boundary condition and duration
@@ -109,9 +110,12 @@ public:
             nCoeffMat.col(4) = boundCond.col(1) * t1;
             nCoeffMat.col(5) = boundCond.col(0);
         }
+        is_empty_ = false;
 
     }
-
+    inline bool empty(){
+        return is_empty_;
+    }
     inline void reset(){
         nCoeffMat.setZero();
         duration = 0;
@@ -658,6 +662,7 @@ private:
 
     bool had_length_ = false;
     double length_;
+    double cost_;
 public:
     Trajectory() = default;
 
@@ -670,6 +675,14 @@ public:
         {
             pieces.emplace_back(durs[i], coeffMats[i]);
         }
+    }
+
+    inline void setCost(double cost){
+        cost_ = cost;
+    }
+
+    inline double getCost(){
+        return cost_;
     }
 
     inline size_t getPieceNum() const
@@ -885,9 +898,14 @@ public:
         dist = dist>=max_d?max_d:dist;
         double cur_t = 0.0; Vec3 cur_pt,end_pt = getPos((-1));
         Vec3 start_pt = getPos(cur_t);
+        int local_cnt = 0;
         while (cur_t <= (total_dur)){
+
             cur_pt = getPos(cur_t);
-            waypts.push_back(cur_pt);
+            if(local_cnt > 1 || local_cnt == 0){
+                waypts.push_back(cur_pt);
+            }
+
             if((cur_pt - start_pt).norm() > range){
                 break;
             }
@@ -895,10 +913,46 @@ public:
                 break;
             }
             cur_pt = getForwardPosintion(cur_pt,dist,cur_t);
+            local_cnt++;
         }
-        waypts.push_back(getPos(total_dur));
+        waypts.push_back(end_pt);
         return waypts;
     }
+
+    inline std::vector<Eigen::Vector3d> getWaypointsInSensingRangeTraversal(double max_d,double range){
+        std::vector<Eigen::Vector3d> waypts;
+        double cur_dur, total_dur = getTotalDuration(),total_len = getTotalLength(),num_seg = getPieceNum();
+        double dist = total_len/(num_seg+1);
+        dist = dist>=max_d?max_d:dist;
+        double cur_t = 0.0; Vec3 cur_pt,end_pt = getPos((-1));
+        Vec3 start_pt = getPos(cur_t); Vec3 last_pt = start_pt;
+        int local_cnt = 0;
+        cur_t+=0.1;
+        while (cur_t <= (total_dur)){
+
+            cur_pt = getPos(cur_t);
+            if(local_cnt > 1 || local_cnt == 0){
+                waypts.push_back(cur_pt);
+            }
+
+            if((cur_pt - start_pt).norm() > range){
+                break;
+            }
+            if((cur_pt - end_pt).norm() < dist){
+                break;
+            }
+            cur_pt = getForwardPosintion(cur_pt,dist,cur_t);
+            while((cur_pt - last_pt).norm() < dist){
+                cur_t+=0.1;
+                cur_pt = getPos(cur_t);
+            }
+            last_pt = cur_pt;
+            local_cnt++;
+        }
+        waypts.push_back(end_pt);
+        return waypts;
+    }
+
 
     inline std::vector<Eigen::Vector3d> getWaypoints(bool pure_waypts = false){
 
@@ -918,6 +972,7 @@ public:
         waypts.push_back(getPos(total_dur));
         return waypts;
     }
+
 
     // Get the position at the juncIdx-th waypoint
     inline Eigen::Vector3d getJuncPos(int juncIdx) const

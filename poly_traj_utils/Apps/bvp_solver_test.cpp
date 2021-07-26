@@ -9,7 +9,7 @@
 #include "poly_traj_utils/scope_timer.hpp"
 
 using namespace std;
-ObvpSolver solver(1000, 7, 5);
+ObvpSolver2 solver(1000, 7, 5);
 Vec3 points[2];
 Vec3 vels[2];
 int idx = 0;
@@ -40,10 +40,11 @@ void wayPoint_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
         end_state << points[1], vels[1], 0, 0, 0, 0, 0, 0;
         Piece pie ;
         {
-            TimeConsuming t_("OPT",1e4);
-            int cnt = 1e4;
+            TimeConsuming t_("OPT",1e2);
+            int cnt = 1e2;
             while (cnt --)
-            pie = solver.GenFixStateMinSnapOptTC(start_state, end_state);
+            pie = solver.GenFixPVMinSnap(start_state, end_state,4);
+//            pie = solver.GenFixStateMinSnapOptT(start_state, end_state);
         }
         double vel = pie.getMaxVelRate();
         double acc = pie.getMaxAccRate();
@@ -79,17 +80,17 @@ int main(int argc, char **argv) {
     spinner.start();
     ros::Duration(1.0).sleep();
 
-//    StatePVAJ start, goal;
-//    start.head(3) = Vec3(0, 0, 0);
-//    start.segment(3, 3) = Vec3(1, 2, 1);
-//    start.segment(6, 3) = Vec3(1, 0, 0);
-//    start.tail(3) = Vec3(0, 0, 0);
-//
-//    goal.head(3) = Vec3(5, 0, 0);
-//    goal.segment(3, 3) = Vec3(2, 0, 1);
-//    goal.segment(6, 3) = Vec3(0, 1, 0);
-//    goal.tail(3) = Vec3(0, 0, 0);
-//
+    StatePVAJ start, goal;
+    start.head(3) = Vec3(0, 0, 0);
+    start.segment(3, 3) = Vec3(1, 2, 1);
+    start.segment(6, 3) = Vec3(1, 0, 0);
+    start.tail(3) = Vec3(0, 0, 0);
+
+    goal.head(3) = Vec3(5, 0, 0);
+    goal.segment(3, 3) = Vec3(2, 0, 1);
+    goal.segment(6, 3) = Vec3(0, 1, 0);
+    goal.tail(3) = Vec3(0, 0, 0);
+
 //    Piece pie = solver.GenFixStateMinSnapOptTC(start,goal);
 ////     Time compareson of different
 //    {
@@ -129,17 +130,17 @@ int main(int argc, char **argv) {
 //    double t = solver.GetLastTstar();
 //    double cost = solver.GetLastCost();
 //    printf("t = %lf, cost = %lf\n", t,cost);
-//    double cur_t = 0, acc_cost = 0;
-//    double max_v = 0.0;
-//    while (cur_t < t) {
-//        Vec3 cur_vel = pie.getVel(cur_t);
-//        if(cur_vel.norm()>max_v){
-//            max_v = cur_vel.norm();
-//        }
-//        cur_t += 0.001;
-//    }
-//    printf("max_vel = %lf, max_acc = %lf\n", max_v,vel);
-//    cout<<pie.checkMaxVelRate(2.3)<<endl;
+    Piece pie = solver.GenFixStateMinSnapOptT(start,goal);
+    double t = solver.GetLastTstar();
+    double cur_t = 0, acc_cost = 0;
+    double max_v = 0.0;
+    while (cur_t <= t) {
+        Vec3 cur_snap = pie.getSnap(cur_t);
+        acc_cost+=cur_snap.squaredNorm()*0.001;
+        cur_t += 0.001;
+    }
+    fmt::print("Acc cost 2 = {}, calc cost = {}\n",acc_cost+1000*4, solver.GetLastCost());
+    cout<<pie.checkMaxVelRate(2.3)<<endl;
 
 
 

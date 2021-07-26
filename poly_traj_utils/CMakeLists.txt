@@ -33,6 +33,7 @@ set(THIRD_PARTY
         ${catkin_LIBRARIES}
         ${PCL_LIBRARIES}
         ${OpenCV_LIBRARIES}
+        -lfmt
         )
 
 add_library(${PROJECT_NAME}
