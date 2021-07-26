@@ -361,7 +361,6 @@ public:
         }
         double J = 0.0, aa, bb, yy, ww;
         for (size_t i = 0; i < 3; i++) {
-
             switch (type) {
                 case FULLFIX: {
                     Eigen::Vector4d delta_pvaj = Eigen::Vector4d(

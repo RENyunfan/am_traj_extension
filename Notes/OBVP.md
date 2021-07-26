@@ -206,7 +206,7 @@ $$
 $$
 对于自由变量，庞特里亚金极小值原理有一个新的约束，称为横截条件（Transversal Condition）【注意横截条件只针对终止时间T成立】，其中$h$表示终端代价，因此在我们的问题中均为0
 $$
- \lambda_i(T) = \frac{\part h}{\part x_i}(T) = 0
+\lambda_i(T) = \frac{\part h}{\part x_i}(T) = 0
 $$
 我们需要将哈密顿函数对状态求导
 $$
@@ -219,10 +219,10 @@ $$
 \vec\lambda(t) = 
 \left[
 \begin{matrix}
- -6\alpha\\
-6\alpha t+2\beta\\
- -3\alpha t^2 - 2\beta t - 2\gamma\\
- \alpha t^3 + \beta^2 + 2\gamma t+ 2\omega
+ 6\alpha\\
+-6\alpha t+4\beta\\
+ 3\alpha t^2 + 4\beta t +2\gamma\\
+ -\alpha t^3 - 2\beta^2 - 2\gamma t- 2\omega
 \end{matrix}
 \right]
 $$
