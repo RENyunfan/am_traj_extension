@@ -128,6 +128,7 @@ public:
         DynamicMat mat = getCoeffMat();
         duration = dur;
         double t = 1.0;
+        had_sampled_ = false;
         for (int i = order_; i >= 0; i--)
         {
             nCoeffMat.col(i) = mat.col(i) * t;

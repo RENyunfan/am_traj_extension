@@ -335,6 +335,7 @@ public:
 
     inline Piece GenFixStateMinSnapOptT(StatePVAJ &start_state, StatePVAJ &end_state, int type = FULLFIX) {
         double t = CalcOptimalDuration(start_state, end_state, type);
+        fmt::print(fg(fmt::color::azure), "Opt time = {}\n", t);
         if (t < 0) {
             Piece empt;
             return empt;
