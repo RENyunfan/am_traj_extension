@@ -1,0 +1,6 @@
+
+<launch>
+
+    <node pkg="rviz" type="rviz" name="obvp_test" args="-d $(find poly_traj_utils)/config/minco_test.rviz"/>
+
+</launch>

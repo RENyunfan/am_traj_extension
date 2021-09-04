@@ -3,14 +3,14 @@
 //
 #include "vector"
 #include "ros/ros.h"
-#include "poly_traj_utils/am_traj_plus.hpp"
-#include "poly_traj_utils/am_traj.hpp"
+#include "poly_traj_utils/am/am_traj.hpp"
 #include "poly_traj_utils/poly_visual_utils.hpp"
+#include "poly_traj_utils/scope_timer.hpp"
 
 using namespace std;
 typedef Eigen::Matrix<double, 3, 3> Mat33;
 typedef Eigen::Matrix<double, 3, 1> Vec3;
-nav_msgs::Odometry odom_;
+
 order7::AmTraj::Ptr am_ptr_7;
 order5::AmTraj::Ptr am_ptr_5;
 Vec3 vels[2];
@@ -39,8 +39,6 @@ eps: Relative tolerance
     bool use_order_5;
 } op_7,op_5;
 
-
-vector<Vec3> waypts;
 
 void wayPoint_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
     Vec3 cur_point;

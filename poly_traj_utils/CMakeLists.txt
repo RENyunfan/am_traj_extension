@@ -33,34 +33,49 @@ set(THIRD_PARTY
         ${catkin_LIBRARIES}
         ${PCL_LIBRARIES}
         ${OpenCV_LIBRARIES}
+        -lfmt
+        dw
         )
 
 add_library(${PROJECT_NAME}
         src/poly_traj_utils.cpp
-        src/obvp_solver.cpp
-        src/poly_visual_utils.cpp
-        src/am_traj.cpp
-        src/bvp_solver.cpp
         )
 target_link_libraries(
         ${PROJECT_NAME}
         ${THIRD_PARTY}
 )
+#==========================================================
+#
+#add_executable(simple_traj_coef
+#        Apps/simple_traj_generator_coef.cpp
+#        )
+#
+#target_link_libraries(simple_traj_coef
+#        ${PROJECT_NAME}
+#        ${THIRD_PARTY}
+#        )
 
-add_executable(poly_utils_test
-        Apps/poly_utils_test.cpp
+#add_executable(poly_utils_test
+#        Apps/poly_utils_test.cpp
+#        )
+#
+#target_link_libraries(poly_utils_test
+#        ${PROJECT_NAME}
+#        ${THIRD_PARTY}
+#        )
+#
+#add_executable(opt_utils_test
+#        Apps/opt_utils_test.cpp
+#        )
+#
+#target_link_libraries(opt_utils_test
+#        ${PROJECT_NAME}
+#        ${THIRD_PARTY}
+#        )
+add_executable(minco_test
+        Apps/minco_test.cpp
         )
 
-target_link_libraries(poly_utils_test
-        ${PROJECT_NAME}
-        ${THIRD_PARTY}
-        )
-
-add_executable(opt_utils_test
-        Apps/opt_utils_test.cpp
-        )
-
-target_link_libraries(opt_utils_test
-        ${PROJECT_NAME}
+target_link_libraries(minco_test
         ${THIRD_PARTY}
         )

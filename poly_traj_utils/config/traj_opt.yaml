@@ -10,7 +10,7 @@
 /optimizer/order7/max_it: 23
 /optimizer/order7/eps: 0.02
 
-/optimizer/order5/weight_T: 2024.0
+/optimizer/order5/weight_T: 8024.0
 /optimizer/order5/weight_acc:  16.0
 /optimizer/order5/weight_jerk: 0.2
 /optimizer/order5/weight_snap: 0.0
@@ -23,4 +23,4 @@
 /optimizer/order5/eps: 0.05
 
 /manager/use_order_5: true
-/manager/use_order_7: true
+/manager/use_order_7: false
