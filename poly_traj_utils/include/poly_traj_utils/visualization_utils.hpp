@@ -684,7 +684,7 @@ public:
         pub_.publish(mrkarr);
     }
 
-    static void PublishTrajAccToMarkerArray(ros::Publisher &pub_, Trajectory traj, Vec3 color = BLUE) {
+    static void PublishTrajAccToMarkerArray(ros::Publisher &pub_, Trajectory traj, Vec3 color = ORANGE) {
         double t_sum = traj.getTotalDuration();
         double sum_dis = traj.getTotalLength();
         double eval_t = 0.0;

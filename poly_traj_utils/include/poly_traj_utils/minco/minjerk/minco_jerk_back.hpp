@@ -1024,9 +1024,7 @@ public:
         for (int i = 0; i < M - 1; i++)
         {
             lastP = curP;
-            // k 走廊定点个数
             k = cfgPolyVs[2 * i + 1].cols() - 1;
-            //
             curP = cfgPolyVs[2 * i + 1].rightCols(k).rowwise().sum() / (1.0 + k) +
                    cfgPolyVs[2 * i + 1].col(0);
             curInterval = ceil((curP - lastP).norm() / gridResolution);
@@ -1131,7 +1129,7 @@ public:
         {
             return false;
         }
-        // interval = 轨迹段数 = 走廊个数
+
         intervals.resize(coarseN);
         gridMesh(iState, fState, cfgVs, gridRes, intervals);//cfgVs dimension:2n-1
         fineN = intervals.sum();

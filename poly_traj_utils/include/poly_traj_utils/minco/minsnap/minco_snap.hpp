@@ -46,7 +46,7 @@
 #include <vector>
 #include "fmt/color.h"
 #include "../../poly_data_structure.hpp"
-
+#include "poly_traj_utils/scope_timer.hpp"
 
 
 
@@ -1029,6 +1029,7 @@ private:
                                        double *grad, ///<[in] 计算当前梯度值
                                        const int n  ///<[in] 优化变量数量 n
     ) {
+        TimeConsuming t__("SNAP: objectiveFunc");
         // 从GCOPTER类内获得一些变量
         QNMOPT &obj = *(QNMOPT *) ptrObj;
         // 初始化优化维度

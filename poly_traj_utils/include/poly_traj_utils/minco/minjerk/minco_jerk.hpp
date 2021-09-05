@@ -36,7 +36,8 @@
 #include <vector>
 #include <ctime>
 #include "poly_traj_utils/poly_data_structure.hpp"
-
+#include "poly_traj_utils/scope_timer.hpp"
+#include <iomanip>      // std::setprecision
 
 class MINCO_S3 {
 public:
@@ -45,6 +46,32 @@ public:
     ~MINCO_S3() { A.destroy(); }
     //my
     // double compute_time = 0;
+
+    inline void savelog2txt() {
+        time_t t = time(NULL);
+        char ch[64] = {0};
+        char result[100] = {0};
+        strftime(ch, sizeof(ch) - 1, "%Y%m%d--%H%M%S", localtime(&t));
+        sprintf(result, "%s", ch);
+        std::string filename = std::string(result);
+        filename = "/home/yunfan/Logs/opt/opt.txt";// + filename + ".txt";
+        std::ofstream log_file(filename);
+        std::ostream_iterator<Eigen::Matrix<double, 1, -1>> log_iterator(log_file, "\n");
+        std::copy(opt_log.begin(), opt_log.end(), log_iterator);
+        printf(" -- [EXIT] \033[32m SAVE MPC LOGS SUCCESS! \033[0m\n");
+    }
+
+    inline void resetlog() {
+        opt_log.clear();
+    }
+
+    inline void setSmootheps(double smo){
+        smoothEps = smo;
+    }
+
+    inline void write2log(Eigen::VectorXd curlog) {
+        opt_log.push_back(curlog.transpose());
+    };
 private:
     int N;
     Eigen::Matrix3d headPVA;
@@ -60,9 +87,31 @@ private:
     Eigen::VectorXd T5;
     Eigen::MatrixXd gdC;
     double *cost_block;
-
+    double smoothEps;
 
 private:
+    vector<Eigen::Matrix<double, 1, -1>> opt_log;
+
+    inline void positiveSmoothedL1(const double &x, double &f, double &df) const {
+        const double pe = smoothEps;
+        const double half = 0.5 * pe;
+        const double f3c = 1.0 / (pe * pe);
+        const double f4c = -0.5 * f3c / pe;
+        const double d2c = 3.0 * f3c;
+        const double d3c = 4.0 * f4c;
+
+        if (x < pe) {
+            f = (f4c * x + f3c) * x * x * x;
+            df = (d3c * x + d2c) * x * x;
+        } else {
+            f = x - half;
+            df = 1.0;
+        }
+
+        return;
+    }
+
+
     template<typename EIGENVEC>
     inline void addGradJbyT(EIGENVEC &gdT) const {
         for (int i = 0; i < N; i++) {
@@ -191,6 +240,7 @@ private:
                                   double &cost,
                                   EIGENVEC &gdT,
                                   Eigen::MatrixXd &gdC) const {
+//        TimeConsuming t__("addTimeIntPenalty");
         double pena = 0.0;
         const double vMaxSqr = vMax * vMax;
         const double thrAccMinSqr = thrAccMin * thrAccMin;
@@ -332,9 +382,10 @@ private:
 //                }
 
                 if (violaVel > 0.0) {
-                    violaVelPenaD = violaVel * violaVel;
-                    violaVelPena = violaVelPenaD * violaVel;
-                    violaVelPenaD *= 3.0;
+//                    violaVelPenaD = violaVel * violaVel;
+//                    violaVelPena = violaVelPenaD * violaVel;
+//                    violaVelPenaD *= 3.0;
+                    positiveSmoothedL1(violaVel, violaVelPena, violaVelPenaD);
                     gradViolaVc = 2.0 * beta1 * vel.transpose();
                     gradViolaVt = 2.0 * alpha * vel.transpose() * acc;
                     gdC.block<6, 3>(i * 6, 0) += omg * step * ci(1) * violaVelPenaD * gradViolaVc;
@@ -345,9 +396,10 @@ private:
                 }
 
                 if (violaThrl > 0.0) {
-                    violaThrlPenaD = violaThrl * violaThrl;
-                    violaThrlPena = violaThrlPenaD * violaThrl;
-                    violaThrlPenaD *= 3.0;
+//                    violaThrlPenaD = violaThrl * violaThrl;
+//                    violaThrlPena = violaThrlPenaD * violaThrl;
+//                    violaThrlPenaD *= 3.0;
+                    positiveSmoothedL1(violaThrl, violaThrlPena, violaThrlPenaD);
                     gradViolaThrlc = -beta2 * dSqrMagThr.transpose();
                     gradViolaThrlt = -alpha * dSqrMagThr.transpose() * jer;
                     gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaThrlPenaD * gradViolaThrlc;
@@ -357,9 +409,10 @@ private:
                 }
 
                 if (violaThrh > 0.0) {
-                    violaThrhPenaD = violaThrh * violaThrh;
-                    violaThrhPena = violaThrhPenaD * violaThrh;
-                    violaThrhPenaD *= 3.0;
+//                    violaThrhPenaD = violaThrh * violaThrh;
+//                    violaThrhPena = violaThrhPenaD * violaThrh;
+//                    violaThrhPenaD *= 3.0;
+                    positiveSmoothedL1(violaThrh, violaThrhPena, violaThrhPenaD);
                     gradViolaThrhc = beta2 * dSqrMagThr.transpose();
                     gradViolaThrht = alpha * dSqrMagThr.transpose() * jer;
                     gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaThrhPenaD * gradViolaThrhc;
@@ -369,9 +422,10 @@ private:
                 }
 
                 if (violaBdr > 0.0) {
-                    violaBdrPenaD = violaBdr * violaBdr;
-                    violaBdrPena = violaBdrPenaD * violaBdr;
-                    violaBdrPenaD *= 3.0;
+//                    violaBdrPenaD = violaBdr * violaBdr;
+//                    violaBdrPena = violaBdrPenaD * violaBdr;
+//                    violaBdrPenaD *= 3.0;
+                    positiveSmoothedL1(violaBdr, violaBdrPena, violaBdrPenaD);
                     gradViolaBdrc = beta2 * dSqrMagBdr.transpose() + beta3 * dJerSqrMagBdr.transpose();
                     gradViolaBdrt = alpha * (dSqrMagBdr.dot(jer) + dJerSqrMagBdr.dot(sna));
                     gdC.block<6, 3>(i * 6, 0) += omg * step * ci(3) * violaBdrPenaD * gradViolaBdrc;
@@ -540,6 +594,12 @@ public:
 };
 
 class SE3GCOPTER {
+public:
+    int cnt = 0;
+    inline void cntpp(){
+        cnt++;
+    }
+
 private:
     // Use C2 or Cinf diffeo
     bool c2dfm;
@@ -578,9 +638,11 @@ private:
     int fineN;
     int dimFreeT;
     int dimFreeP;
+    Eigen::VectorXd freeT;
     Eigen::VectorXd coarseT;
     Eigen::VectorXd fineT;
     Eigen::MatrixXd innerP;
+    Eigen::MatrixXd init_innerP;
     Eigen::Matrix3Xd freePts;
     // Params for constraints
     Eigen::VectorXi cons;
@@ -596,6 +658,7 @@ private:
 
     // L-BFGS Solver Parameters
     lbfgs::lbfgs_parameter_t lbfgs_params;
+
 
 private:
     template<typename EIGENVEC>
@@ -881,10 +944,12 @@ private:
         return;
     }
 
+
     static inline double objectiveFunc(void *ptrObj,
                                        const double *x,
                                        double *grad,
                                        const int n) {
+//        TimeConsuming t__("objectiveFunc");
         SE3GCOPTER &obj = *(SE3GCOPTER *) ptrObj;
         const int dimT = obj.dimFreeT;
         const int dimP = obj.dimFreeP;
@@ -892,34 +957,34 @@ private:
         Eigen::Map<const Eigen::VectorXd> t(x, dimT);
         Eigen::Map<const Eigen::VectorXd> p(x + dimT, dimP);
         Eigen::Map<Eigen::VectorXd> gradt(grad, dimT);
-        Eigen::VectorXd proxyGradT(obj.fineN);
+        Eigen::VectorXd proxyGradT(obj.dimFreeT);
         Eigen::Map<Eigen::VectorXd> gradp(grad + dimT, dimP);
 
-        forwardT(t, obj.coarseT, obj.softT, obj.sumT, obj.c2dfm);
-        splitToFineT(obj.coarseT, obj.intervals, obj.fineT);
+        // 从微分同胚的tau映射为T
+        forwardT(t, obj.freeT, obj.softT, obj.sumT, obj.c2dfm);
+//        splitToFineT(obj.coarseT, obj.intervals, obj.fineT);
 //        forwardP(p, obj.idxVs, obj.cfgVs, obj.innerP);
+        // 从优化变量中取出新的innerP
         for (int i = 0; i < obj.freePts.cols(); i++) {
             obj.freePts.col(i).x() = p(3 * i);
             obj.freePts.col(i).y() = p(3 * i + 1);
             obj.freePts.col(i).z() = p(3 * i + 2);
             obj.innerP.col(i * 2) = obj.freePts.col(i);
         }
-        double cost;
 
-        obj.jerkOpt.generate(obj.innerP, obj.fineT);
+        double cost;
+        obj.jerkOpt.generate(obj.innerP, obj.freeT);
         obj.jerkOpt.evalTrajCostGrad(obj.cons, obj.idxHs, obj.cfgHs, obj.ellipsoid,
                                      obj.safeMargin, obj.vMax, obj.thrAccMin,
                                      obj.thrAccMax, obj.bdrMax, obj.gAcc, obj.chi,
                                      cost, proxyGradT, obj.gdInPs);
 
-        cost += rh * obj.coarseT.sum();
+        cost += rh * obj.freeT.sum();
         proxyGradT.array() += rh;
 
-        mergeToCoarseGradT(obj.intervals, proxyGradT);
-        //grad of T
-        //T,P->tau kesi
         addLayerTGrad(t, proxyGradT, obj.softT, obj.sumT, obj.c2dfm);
-//        addLayerPGrad(p, obj.idxVs, obj.cfgVs, obj.gdInPs, gradp);
+
+        // 将所有内部点的梯度信息，提取出freep的梯度加入到gradp中
         int idx = 0;
         for (int i = 0; i < obj.gdInPs.cols(); i++) {
             if (i % 2 == 0) {
@@ -930,78 +995,17 @@ private:
         }
         gradt = proxyGradT.head(dimT);
 
+//        cout<<std::setprecision(5)<< "it = " << iter_num++<<" gradT = "<<gradt.transpose()<<"\tgradP = "<<gradp.transpose()<<" freep = "<<p.transpose()<<" freet = "<<t.transpose()<<endl;
+        Eigen::VectorXd curlog((dimT + dimP) * 2);
+        obj.cntpp();
         return cost;
     }
 
 public:
-    inline void gridMesh(const Eigen::Matrix3d &iState,
-                         const Eigen::Matrix3d &fState,
-                         const std::vector<Eigen::MatrixXd> &cfgPolyVs,
-                         const double &gridResolution,
-                         Eigen::VectorXi &intervalsVec) const {
-        int M = intervalsVec.size();
-
-        int curInterval, k;
-        Eigen::Vector3d lastP, curP;
-        curP = iState.col(0);
-        for (int i = 0; i < M - 1; i++) {
-            lastP = curP;
-            k = cfgPolyVs[2 * i + 1].cols() - 1;
-            curP = cfgPolyVs[2 * i + 1].rightCols(k).rowwise().sum() / (1.0 + k) +
-                   cfgPolyVs[2 * i + 1].col(0);
-            curInterval = ceil((curP - lastP).norm() / gridResolution);
-            intervalsVec(i) = curInterval > 0 ? curInterval : 1;
-        }
-        lastP = curP;
-        curP = fState.col(0);
-        curInterval = ceil((curP - lastP).norm() / gridResolution);
-        intervalsVec(M - 1) = curInterval > 0 ? curInterval : 1;
-
-        return;
-    }
-
-    inline bool extractVs(const std::vector<Eigen::MatrixXd> &hPs,
-                          std::vector<Eigen::MatrixXd> &vPs) const {
-        const int M = hPs.size() - 1;
-
-        vPs.clear();
-        vPs.reserve(2 * M + 1);
-
-        int nv;
-        Eigen::MatrixXd curIH, curIV, curIOB;
-        for (int i = 0; i < M; i++) {
-            if (!geoutils_jerk::enumerateVs(hPs[i], curIV)) {
-                return false;
-            }
-            nv = curIV.cols();
-            curIOB.resize(3, nv);
-            curIOB << curIV.col(0), curIV.rightCols(nv - 1).colwise() - curIV.col(0);
-            vPs.push_back(curIOB);
-
-            curIH.resize(6, hPs[i].cols() + hPs[i + 1].cols());
-            curIH << hPs[i], hPs[i + 1];
-            if (!geoutils_jerk::enumerateVs(curIH, curIV)) {
-                return false;
-            }
-            nv = curIV.cols();
-            curIOB.resize(3, nv);
-            curIOB << curIV.col(0), curIV.rightCols(nv - 1).colwise() - curIV.col(0);
-            vPs.push_back(curIOB);
-        }
-
-        if (!geoutils_jerk::enumerateVs(hPs.back(), curIV)) {
-            return false;
-        }
-        nv = curIV.cols();
-        curIOB.resize(3, nv);
-        curIOB << curIV.col(0), curIV.rightCols(nv - 1).colwise() - curIV.col(0);
-        vPs.push_back(curIOB);
-
-        return true;
-    }
 
     inline bool setup(const double &rh,
                       const double &st,
+                      const double &smo,
                       const StatePVA &iniState,
                       const StatePVA &finState,
                       const vector<Vec3> waypts,
@@ -1028,16 +1032,16 @@ public:
             rho = 0.0;
             sumT = st;
         }
-        // 初始化边界条件
+        // 初始化固定约束条件
         iState = iniState;
         fState = finState;
         wayPts = waypts;
-        // 需要优化的时间为waypts数量*2+1
-        // ini-----f1----[w1]----f2------[w2]----f3-----[w3]---f4--fin
+        jerkOpt.setSmootheps(smo);
+        // 需要优化的时间为waypts数量+1
         dimFreeT = (waypts.size() + 1) * 2;
         dimFreeP = (waypts.size() + 1) * 3;
         coarseN = (waypts.size() + 1) * 2;
-        fineN = coarseN;
+        freeT.resize(dimFreeT);
 
         chi = w;
         ellipsoid(0) = horiHalfLen;
@@ -1050,11 +1054,10 @@ public:
         bdrMax = bodyRateMax;
         gAcc = g;
 
-        cons.resize(fineN);
+        cons.resize(dimFreeT);
         cons.setConstant(itgSpaces);
-        intervals.resize(dimFreeT);
-        intervals.setOnes();
-        // 将所有的初始状态限幅，避免无解
+
+        // 将初始速度进行保方向饱和
         double tempNorm;
         tempNorm = iState.col(1).norm();
         iState.col(1) *= tempNorm > vMax ? (vMax / tempNorm) : 1.0;
@@ -1063,91 +1066,40 @@ public:
 
 
         // Setup for L-BFGS solver
-        // 初始话lbfgs的参数
+        // 初始化lbfgs的参数
         lbfgs::lbfgs_load_default_parameters(&lbfgs_params);
 
-        // Allocate temp variables
-        // 根据当前走廊的状态，初始化分配内存空间
-        coarseT.resize(dimFreeT);
-        fineT.resize(fineN);
-        innerP.resize(3, fineN - 1);
-        gdInPs.resize(3, fineN - 1);
 
+        // 初始化内部waypoint矩阵尺寸
+        innerP.resize(3, 2 * waypts.size() + 1);
+        gdInPs.resize(3, 2 * waypts.size() + 1);
 
-        jerkOpt.reset(iniState, finState, fineN);
+        // 初始话Minsnap线性方程组尺寸
+        jerkOpt.reset(iniState, finState, dimFreeT);
 
         return true;
     }
 
-    inline void setInitial(const std::vector<Eigen::Matrix3Xd> &cfgPolyVs,///<[in] 飞行走廊顶点
-                           const Eigen::VectorXi &intervs,  ///<[in] 有效段数
-                           Eigen::VectorXd &vecT,   ///<[out] 初始时间分配
-                           Eigen::Matrix3Xd &vecInP) const { ///<[out] 初始waypoint分配
+    inline void setInitial() {
         // 初始化时间分配直接拉满到速度
         const double allocationSpeed = vMax;
-        int M = vecT.size();
-        Eigen::Vector3d lastP, curP, delta;
-        int offset, interv, k;
-
-        offset = 0;
-        curP = iState.col(0);
-        for (int i = 0; i < M - 1; i++) {
-            lastP = curP;
-            interv = intervs(i);
-            k = cfgPolyVs[2 * i + 1].cols() - 1;
-            curP = cfgPolyVs[2 * i + 1].rightCols(k).rowwise().sum() / (1.0 + k) +
-                   cfgPolyVs[2 * i + 1].col(0);
-            delta = curP - lastP;
-            vecT(i) = delta.norm() / allocationSpeed;
-            delta /= interv;
-            for (int j = 0; j < interv; j++) {
-                vecInP.col(offset++) = (j + 1) * delta + lastP;
-            }
-        }
-        interv = intervs(M - 1);
-        lastP = curP;
-        curP = fState.col(0);
-        delta = curP - lastP;
-        vecT(M - 1) = delta.norm() / allocationSpeed;
-        delta /= interv;
-        for (int j = 0; j < interv - 1; j++) {
-            vecInP.col(offset++) = (j + 1) * delta + lastP;
-        }
-
-        return;
-    }
-
-
-    inline double optimize(Trajectory &traj,
-                           double &relCostTol) {
-
-        /*
-                cout<<"iniState===============\n "<< iState<<endl;
-                for(int i = 0 ; i < wayPts.size() ; i++){
-                    cout<< "Waypts "<<i<<" :"<<wayPts[i].transpose()<<endl;
-                }
-                cout<<"finState===============\n "<< fState<<endl;
-        */
-
-        //        fmt::print("OPT VAR NUM = {}\n",dimFreeT+dimFreeP);
-        // 分配优化状态向量 尺寸等于优化时间和状态
-        double *x = new double[dimFreeT + dimFreeP];
-        // 使用map操作将时间优化与t绑定，状态优化与p绑定
-        Eigen::Map<Eigen::VectorXd> t(x, dimFreeT);
-        Eigen::Map<Eigen::VectorXd> p(x + dimFreeT, dimFreeP);
-        // 初始化时间分配直接拉满到速度
-        const double allocationSpeed = vMax;
-        int M = dimFreeT;
 
         if (wayPts.size() == 0) {
+            // 如果只固定起点和终点，则只有一个自由waypoint
             freePts.resize(3, 1);
+            // 将自由点设置为起点和终点的中间
             freePts = (fState.col(0) + iState.col(0)) / 2;
+            // 轨迹内部所有waypoint等于自由点
             innerP.col(0) = freePts;
-            coarseT(0) = (fState.col(0) - iState.col(0)).norm() / allocationSpeed / 2;
-            coarseT(1) = (fState.col(0) - iState.col(0)).norm() / allocationSpeed / 2;
+            // 时间分配为最大速度跑直线
+            freeT(0) = (fState.col(0) - iState.col(0)).norm() / 2 / allocationSpeed;
+            freeT(1) = (fState.col(0) - iState.col(0)).norm() / 2 / allocationSpeed;
         } else {
+            // 如果有固定的waypoint了
             freePts.resize(3, wayPts.size() + 1);
+            // 第一个自由点的坐标为第一个waypoint和起点中间
             freePts.col(0) = (wayPts[0] + iState.col(0)) / 2;
+            // 中间的自由点坐标为两个相邻waypoint。
             for (int i = 0; i < wayPts.size() - 1; i++) {
                 Vec3 midpt = (wayPts[i] + wayPts[i + 1]) / 2;
                 freePts.col(i + 1) = midpt;
@@ -1155,6 +1107,7 @@ public:
 
             freePts.rightCols(1) = (wayPts[wayPts.size() - 1] + fState.col(0)) / 2;
 
+            // 随后填充所有内部点。
             for (int i = 0; i < wayPts.size(); i++) {
                 innerP.col(2 * (i)) = freePts.col(i);
                 innerP.col(2 * (i) + 1) = wayPts[i];
@@ -1162,35 +1115,69 @@ public:
 
             innerP.rightCols(1) = freePts.rightCols(1);
 
-            M = dimFreeT;
+            // 计算时间分配
             Eigen::Vector3d lastP, curP, delta;
             curP = iState.col(0);
-            for (int i = 0; i < M - 1; i++) {
+            for (int i = 0; i < dimFreeT - 1; i++) {
                 lastP = curP;
                 curP = innerP.col(i);
                 delta = curP - lastP;
-                coarseT(i) = delta.norm() / allocationSpeed;
+                freeT(i) = delta.norm() / allocationSpeed;
             }
             delta = innerP.rightCols(1) - fState.col(0);
-            coarseT(dimFreeT - 1) = delta.norm() / allocationSpeed;
+            freeT(dimFreeT - 1) = delta.norm() / allocationSpeed;
         }
+        init_innerP = innerP;
 
+        return;
+    }
 
-        // 将优化器的时间初始化成一种类似log的形式
-        backwardT(coarseT, t, softT, c2dfm);
+    inline vector<Vec3> getInnerPts() {
+        vector<Vec3> inp;
+        for (int i = 0; i < innerP.cols(); i++) {
+            inp.push_back(innerP.col(i));
+        }
+        return inp;
+    }
+
+    inline vector<Vec3> getInitInnerPts() {
+        vector<Vec3> inp;
+        for (int i = 0; i < init_innerP.cols(); i++) {
+            inp.push_back(init_innerP.col(i));
+        }
+        return inp;
+    }
+
+    inline double optimize(Trajectory &traj,
+                           double &relCostTol) {
+        TimeConsuming t__("Total opt time");
+        // 分配优化状态向量 尺寸等于优化时间和状态
+        double *x = new double[dimFreeT + dimFreeP];
+        // 使用map操作将时间优化与t绑定，状态优化与p绑定
+        Eigen::Map<Eigen::VectorXd> t(x, dimFreeT);
+        Eigen::Map<Eigen::VectorXd> p(x + dimFreeT, dimFreeP);
+        cnt = 0;
+        // 初始化优化状态变量
+        setInitial();
+
+        // 将优化器时间填充为微分同胚的形式
+        backwardT(freeT, t, softT, c2dfm);
+
+        // 将优化状态直接填入优化变量
         for (int i = 0; i < freePts.cols(); i++) {
             p(3 * i) = freePts.col(i).x();
             p(3 * i + 1) = freePts.col(i).y();
             p(3 * i + 2) = freePts.col(i).z();
         }
-
+        jerkOpt.resetlog();
         // 初始主优化参数
         double minObjectivePenalty;
-        lbfgs_params.mem_size = 128;
+        lbfgs_params.mem_size = 64;
         lbfgs_params.past = 3;
         lbfgs_params.g_epsilon = 1.0e-16;
         lbfgs_params.min_step = 1.0e-32;
-        lbfgs_params.delta = relCostTol;
+        lbfgs_params.abs_curv_cond = 1;
+        lbfgs_params.delta = 1e-5;
         //        fmt::print(fg(fmt::color::gold), " -- [DEBUG] lbfgs init success.\n");
         //        fmt::print(fg(fmt::color::azure), "\tdimFreeT = {}\n", dimFreeT);
         // 开始下降
@@ -1204,21 +1191,32 @@ public:
                                             &lbfgs_params);
 
         if (retCode < 0) {
-            fmt::print(fg(fmt::color::red), " -- [DEBUG] lbfgs ret code = {}\n", retCode);
+            fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, " -- RETCODE {}. Backend failed, return!\n", retCode);
+            cout << "iniState===============\n " << iState << endl;
+            cout << "=================================" << endl;
+            for (int i = 0; i < wayPts.size(); i++) {
+                cout << "Waypts " << i << " :" << wayPts[i].transpose() << endl;
+            }
+            cout << "finState===============\n " << fState << endl;
+
+        }
+        else{
+            fmt::print(fg(fmt::color::green) | fmt::emphasis::bold, " -- RETCODE {}. Success with it_num = {}\n", retCode,cnt);
         }
 
         //        fineT = t.head(dimFreeT);
         //        for(int i = 0 ; i < dimFreeT ; i ++){
         //            fmt::print(" i-th fine T = {}\n", fineT(i));
         //        }
-        forwardT(t, coarseT, softT, sumT, c2dfm);
-        splitToFineT(coarseT, intervals, fineT);
-        // 使用边界条件和时间向量生成一次minsnap
+        // 从最终优化的时间中提取出真实的时间分配
+        forwardT(t, freeT, softT, sumT, c2dfm);
 
-        jerkOpt.generate(innerP, fineT);
+        // 使用边界条件和时间向量生成一次minsnap
+        jerkOpt.generate(innerP, freeT);
         traj = jerkOpt.getTraj();
         relCostTol = minObjectivePenalty;
-
+//        jerkOpt.savelog2txt();
+        fmt::print("dimT = {}, dimP ={}.\n", dimFreeT, dimFreeP);
         delete[] x;
         return jerkOpt.getTrajJerkCost();
     }

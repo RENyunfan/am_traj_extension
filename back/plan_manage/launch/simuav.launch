@@ -1,0 +1,155 @@
+<launch>
+   <arg name="map_size_x_" value="42.0"/>
+   <arg name="map_size_y_" value="40.0"/>
+   <arg name="map_size_z_" value="5.0"/>
+   <arg name="sense_map_type" value="0"/>
+   <arg name="run_type" value="1"/>
+
+  <!-- waypoint callback -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find plan_manage)/launch/map_se3.rviz" required="true" />
+
+  <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+      <remap from="~goal" to="/goal"/>
+      <param name="waypoint_type" value="manual-lonely-waypoint"/>    
+  </node>
+
+    <!-- random map -->
+<!--    <node pkg ="map_generator" name ="random_forest" type ="random_forest" output = "screen">  -->
+<!--        <param name="map/sense_map_type"      value="$(arg sense_map_type)" /> &lt;!&ndash; 0 for global cloud, 1 for local cloud, 2 for local depth &ndash;&gt;-->
+<!--      -->
+<!--        <param name="map/x_size"     value="$(arg map_size_x_)" />-->
+<!--        <param name="map/y_size"     value="$(arg map_size_y_)" />-->
+<!--        <param name="map/z_size"     value="$(arg map_size_z_)" />-->
+<!--        <param name="map/resolution" value="0.1"/>        -->
+
+<!--        <param name="ObstacleShape/seed" value="12"/>-->
+<!--        -->
+<!--        <param name="map/obs_num"    value="1"/>-->
+<!--        <param name="ObstacleShape/lower_rad" value="1.0"/>-->
+<!--        <param name="ObstacleShape/upper_rad" value="1.3"/>-->
+<!--        <param name="ObstacleShape/lower_hei" value="0.5"/>-->
+<!--        <param name="ObstacleShape/upper_hei" value="3.0"/>        -->
+
+<!--        <param name="map/circle_num" value="0"/>        -->
+<!--        <param name="ObstacleShape/radius_l" value="0.7"/>        -->
+<!--        <param name="ObstacleShape/radius_h" value="0.5"/>        -->
+<!--        <param name="ObstacleShape/z_l" value="0.7"/>        -->
+<!--        <param name="ObstacleShape/z_h" value="0.8"/>        -->
+<!--        <param name="ObstacleShape/theta" value="0.5"/>    -->
+
+<!--        <param name="map/gap_num" value="1"/>        -->
+<!--        <param name="map/gap_length" value="50"/>        -->
+<!--        <param name="map/gap_free_length" value="0.8"/>        -->
+<!--        <param name="map/gap_width" value="0.1"/>        -->
+<!--      -->
+
+<!--        <param name="sensing/radius" value="5.0"/>        -->
+<!--        <param name="sensing/rate"   value="1.0"/>  -->
+<!--        -->
+<!--        <param name="min_distance" value="1.2"/>         -->
+<!--        <remap from="/map_generator/global_cloud" to="/global_map"/>-->
+<!--        <remap from="~odometry" to="/visual_slam/odom"/>-->
+
+<!--    </node>-->
+    <node pkg="simulator" type="random_map" name="random_map">
+        <remap from="/global_cloud" to="/global_map"/>
+        <remap from="/odom_topic" to="/visual_slam/odom"/>
+        <remap from="/depth_topic" to="/pcl_render_node/depth" />
+        <param name="map/x_size" value="30.0"></param>
+        <param name="map/y_size" value="30.0"></param>
+        <param name="map/z_size" value="5.0"></param>
+        <param name="map/obs_num" value="50"></param>
+        <param name="map/circle_num" value="50"></param>
+
+        <param name="map/wall_num" value="2"></param>
+        <param name="map/wall_height" value="5"></param>
+        <param name="map/wall_width" value="0.4"></param>
+        <param name="map/wall_length" value="4"></param>
+    </node>
+
+  <!-- se3 planner -->
+    <node pkg="plan_manage" type="se3_node" name="se3_node" output="screen">
+      <remap from="~waypoints"       to="/waypoint_generator/waypoints"/>
+      <remap from="~PointCloud_in"             to="/global_map"/>
+      <remap from="~odom"             to="/visual_slam/odom"/>
+      <remap from="~trajectory"     to=  "/trajectory" />
+      <rosparam file="$(find plan_manage)/misc/se3_planner_params.yaml" command="load" />
+      <param name="map/z_size" value="$(arg map_size_z_)" type="double"/>
+      <param name="map/x_size" value="$(arg map_size_x_)" type="double"/>
+      <param name="map/y_size" value="$(arg map_size_y_)" type="double"/>
+      <param name="world_frame_id" value="world" type="string"/>
+      <param name="use_esdf" value="false" type="bool"/>
+
+      <param name="astar/lambda_heu" value="3.0" type="double"/>
+      <param name="astar/budget_time" value="500.0" type="double"/>
+
+
+    <!-- sensing part -->
+
+    <remap from="/global_cloud" to="/global_map"/>
+    <remap from="/odom_topic" to="/visual_slam/odom"/>
+    <remap from="/depth_topic" to="/pcl_render_node/depth" />
+
+    <param name="occ_map/add_circle_wall" value="false" type="bool"/>
+    <param name="occ_map/circle_wall_width" value="0.3" type="double"/>
+    <param name="occ_map/circle_wall_gap" value="0.5" type="double"/>
+
+
+
+    <param name="occ_map/map_size_x" value="$(arg map_size_x_)" type="double"/>
+    <param name="occ_map/map_size_y" value="$(arg map_size_y_)" type="double"/>
+    <param name="occ_map/map_size_z" value="$(arg map_size_z_)" type="double"/>
+    <param name="occ_map/local_radius_x"  value="100" /> 
+    <param name="occ_map/local_radius_y"  value="100" /> 
+    <param name="occ_map/local_radius_z"  value="100" /> 
+    <param name="occ_map/resolution" value="0.1" type="double"/>
+    <param name="occ_map/show_raw_depth" value="false" type="bool"/>
+    <param name="occ_map/show_filter_proj_depth" value="false" type="bool"/>
+		<param name="occ_map/depth_scale" value="1000.0"/>
+		<param name="occ_map/depth_filter_maxdist"   value="10.0"/>
+    <param name="occ_map/depth_filter_mindist"   value="0.1"/>
+		<param name="occ_map/depth_filter_margin"    value="1"/>
+    <param name="occ_map/skip_pixel" value="2"/>
+
+    <!-- use when mapping frequency is high (>= 30Hz) -->
+    <param name="occ_map/use_shift_filter" value="false" type="bool"/>
+
+    <param name="occ_map/depth_filter_tolerance" value="0.2"/>
+    
+    <!-- <param name="occ_map/cx" value="176.0"/>
+    <param name="occ_map/cy" value="224.0"/>
+    <param name="occ_map/fx" value="176.0"/>
+    <param name="occ_map/fy" value="176.0"/> -->
+    <param name="occ_map/cx" value="319.3750915527344"/>
+    <param name="occ_map/cy" value="241.12332153320312"/>
+    <param name="occ_map/fx" value="385.2784729003906"/>
+    <param name="occ_map/fy" value="385.2784729003906"/>
+    <param name="occ_map/rows" value="640"/>
+    <param name="occ_map/cols" value="480"/>
+
+    <param name="occ_map/prob_hit_log"  value="1.2"/>
+    <param name="occ_map/prob_miss_log" value="-0.30"/>
+    <param name="occ_map/clamp_min_log"  value="-1.0"/>
+    <param name="occ_map/clamp_max_log"  value="2.0"/>
+    <param name="occ_map/min_occupancy_log"  value="1.39"/>
+    <param name="occ_map/min_ray_length" value="0.1"/>
+    <param name="occ_map/max_ray_length" value="8.0"/>
+    <param name="occ_map/use_global_map" value="true" type="bool"/>
+    <param name="occ_map/run_type" value="$(arg run_type)" type="int"/>
+
+
+  </node>
+
+
+    <include file="$(find plan_manage)/launch/simulator.xml">
+    <arg name="map_size_x_" value="$(arg map_size_x_)"/>
+    <arg name="map_size_y_" value="$(arg map_size_y_)"/>
+    <arg name="map_size_z_" value="$(arg map_size_z_)"/>
+    <arg name="c_num" value="10"/>
+    <arg name="p_num" value="80"/>
+
+  </include>
+
+
+
+</launch>
