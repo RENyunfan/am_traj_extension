@@ -156,51 +156,51 @@ enum
 
     /** Unknown error. */
     LBFGSERR_UNKNOWNERROR = -1024,
-    /** Logic error. */
+    /** Logic error.23 */
     LBFGSERR_LOGICERROR,
-    /** The minimization process has been canceled. */
+    /** The minimization process has been canceled.22 */
     LBFGSERR_CANCELED,
-    /** Invalid number of variables specified. */
+    /** Invalid number of variables specified.21 */
     LBFGSERR_INVALID_N,
-    /** Invalid parameter lbfgs_parameter_t::mem_size specified. */
+    /** Invalid parameter lbfgs_parameter_t::mem_size specified. 20*/
     LBFGSERR_INVALID_MEMSIZE,
-    /** Invalid parameter lbfgs_parameter_t::g_epsilon specified. */
+    /** Invalid parameter lbfgs_parameter_t::g_epsilon specified.19 */
     LBFGSERR_INVALID_GEPSILON,
-    /** Invalid parameter lbfgs_parameter_t::past specified. */
+    /** Invalid parameter lbfgs_parameter_t::past specified. 18*/
     LBFGSERR_INVALID_TESTPERIOD,
-    /** Invalid parameter lbfgs_parameter_t::delta specified. */
+    /** Invalid parameter lbfgs_parameter_t::delta specified.17 */
     LBFGSERR_INVALID_DELTA,
-    /** Invalid parameter lbfgs_parameter_t::min_step specified. */
+    /** Invalid parameter lbfgs_parameter_t::min_step specified.16 */
     LBFGSERR_INVALID_MINSTEP,
-    /** Invalid parameter lbfgs_parameter_t::max_step specified. */
+    /** Invalid parameter lbfgs_parameter_t::max_step specified. 15*/
     LBFGSERR_INVALID_MAXSTEP,
-    /** Invalid parameter lbfgs_parameter_t::f_dec_coeff specified. */
+    /** Invalid parameter lbfgs_parameter_t::f_dec_coeff specified.14 */
     LBFGSERR_INVALID_FDECCOEFF,
-    /** Invalid parameter lbfgs_parameter_t::wolfe specified. */
+    /** Invalid parameter lbfgs_parameter_t::wolfe specified. 13*/
     LBFGSERR_INVALID_SCURVCOEFF,
-    /** Invalid parameter lbfgs_parameter_t::xtol specified. */
+    /** Invalid parameter lbfgs_parameter_t::xtol specified. 12*/
     LBFGSERR_INVALID_XTOL,
-    /** Invalid parameter lbfgs_parameter_t::max_linesearch specified. */
+    /** Invalid parameter lbfgs_parameter_t::max_linesearch specified. 11*/
     LBFGSERR_INVALID_MAXLINESEARCH,
-    /** The line-search step went out of the interval of uncertainty. */
+    /** The line-search step went out of the interval of uncertainty. 10*/
     LBFGSERR_OUTOFINTERVAL,
-    /** A logic error occurred; alternatively, the interval of uncertainty became too small. */
+    /** A logic error occurred; alternatively, the interval of uncertainty became too small.9 */
     LBFGSERR_INCORRECT_TMINMAX,
-    /** A rounding error occurred; alternatively, no line-search step satisfies the sufficient decrease and curvature conditions. */
+    /** A rounding error occurred; alternatively, no line-search step satisfies the sufficient decrease and curvature conditions. 8*/
     LBFGSERR_ROUNDING_ERROR,
-    /** The line-search step became smaller than lbfgs_parameter_t::min_step. */
+    /** The line-search step became smaller than lbfgs_parameter_t::min_step. 7*/
     LBFGSERR_MINIMUMSTEP,
-    /** The line-search step became larger than lbfgs_parameter_t::max_step. */
+    /** The line-search step became larger than lbfgs_parameter_t::max_step. 6*/
     LBFGSERR_MAXIMUMSTEP,
-    /** The line-search routine reaches the maximum number of evaluations. */
+    /** The line-search routine reaches the maximum number of evaluations. 5*/
     LBFGSERR_MAXIMUMLINESEARCH,
-    /** The algorithm routine reaches the maximum number of iterations. */
+    /** The algorithm routine reaches the maximum number of iterations. 4*/
     LBFGSERR_MAXIMUMITERATION,
-    /** Relative width of the interval of uncertainty is at most lbfgs_parameter_t::xtol. */
+    /** Relative width of the interval of uncertainty is at most lbfgs_parameter_t::xtol. 3*/
     LBFGSERR_WIDTHTOOSMALL,
-    /** A logic error (negative line-search step) occurred. */
+    /** A logic error (negative line-search step) occurred. 2*/
     LBFGSERR_INVALIDPARAMETERS,
-    /** The current search direction increases the objective function value. */
+    /** The current search direction increases the objective function value. 1*/
     LBFGSERR_INCREASEGRADIENT,
 };
 

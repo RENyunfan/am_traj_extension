@@ -41,16 +41,17 @@ void TwoPointCallback(StatePVA iState, StatePVA fState) {
     double velmax = 5;
     double tacMax = 15;
     double tacMin = 3;
-    double brmax = 4;
+    double brmax = 8;
     double g = 9.81;
     double cost;
     ros::Time backend_start_time = ros::Time::now();
-    Eigen::Vector4d ww(10000000.0, 10000.0, 10000.0, 10000.0);
+    Eigen::Vector4d ww(1000000.0, 1000.0, 1000.0, 1000.0);
     minco.setup(1000, 0.0, iState, fState, waypts, res, itg,
                 horizhalf, vertihalf, safe_mar, velmax, tacMin, tacMax, brmax, g, ww,
                 true);
     Trajectory traj;
     int retcode = minco.optimize(traj, cost);
+    print("Ret code = {}\n",retcode);
     if (retcode < 0) {
         fmt::print(fg(fmt::color::red) | emphasis::bold, " -- [PLANNER] Backend failed, return!\n");
         cout << "iniState===============\n " << iState << endl;
@@ -73,7 +74,7 @@ void TwoPointCallback(StatePVA iState, StatePVA fState) {
     VisualUtils::PublishTrajPosiToMarkerArray(mkr_pub, traj);
     VisualUtils::PublishTrajVelToMarkerArray(mkr_pub, traj);
     VisualUtils::PublishTrajAccToMarkerArray(mkr_pub, traj);
-
+    VisualUtils::PublishTrajJerkToMarkerArray(mkr_pub, traj);
 }
 
 void MultiPointCallback(vector<Vec3> waypts){
@@ -85,7 +86,7 @@ void MultiPointCallback(vector<Vec3> waypts){
     double velmax = 5;
     double tacMax = 15;
     double tacMin = 3;
-    double brmax = 4;
+    double brmax = 8;
     double g = 9.81;
     double cost;
     StatePVA iState, fState;
@@ -98,12 +99,13 @@ void MultiPointCallback(vector<Vec3> waypts){
     }
 
     ros::Time backend_start_time = ros::Time::now();
-    Eigen::Vector4d ww(10000000.0, 10000.0, 10000.0, 10000.0);
+    Eigen::Vector4d ww(1000000.0, 1000.0, 1000.0, 0000.0);
     minco.setup(1000, 0.0, iState, fState, waypts_no, res, itg,
                 horizhalf, vertihalf, safe_mar, velmax, tacMin, tacMax, brmax, g, ww,
                 true);
     Trajectory traj;
     int retcode = minco.optimize(traj, cost);
+    print("Ret code = {}\n",retcode);
     if (retcode < 0) {
         fmt::print(fg(fmt::color::red) | emphasis::bold, " -- [PLANNER] Backend failed, return!\n");
         cout << "iniState===============\n " << iState << endl;
@@ -126,6 +128,7 @@ void MultiPointCallback(vector<Vec3> waypts){
     VisualUtils::PublishTrajPosiToMarkerArray(mkr_pub, traj);
     VisualUtils::PublishTrajVelToMarkerArray(mkr_pub, traj);
     VisualUtils::PublishTrajAccToMarkerArray(mkr_pub, traj);
+    VisualUtils::PublishTrajJerkToMarkerArray(mkr_pub, traj);
 }
 
 nav_msgs::Odometry odom_;

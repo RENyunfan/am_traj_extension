@@ -920,14 +920,14 @@ private:
         //T,P->tau kesi
         addLayerTGrad(t, proxyGradT, obj.softT, obj.sumT, obj.c2dfm);
 //        addLayerPGrad(p, obj.idxVs, obj.cfgVs, obj.gdInPs, gradp);
-int idx = 0;
-for (int i = 0; i < obj.gdInPs.cols(); i++) {
-    if (i % 2 == 0) {
-        Vec3 grd(obj.gdInPs.col(i).x(), obj.gdInPs.col(i).y(), obj.gdInPs.col(i).z());
-        gradp.segment(idx * 3, 3) = grd;
-        idx++;
-    }
-}
+        int idx = 0;
+        for (int i = 0; i < obj.gdInPs.cols(); i++) {
+            if (i % 2 == 0) {
+                Vec3 grd(obj.gdInPs.col(i).x(), obj.gdInPs.col(i).y(), obj.gdInPs.col(i).z());
+                gradp.segment(idx * 3, 3) = grd;
+                idx++;
+            }
+        }
         gradt = proxyGradT.head(dimT);
 
         return cost;
@@ -1032,7 +1032,8 @@ public:
         iState = iniState;
         fState = finState;
         wayPts = waypts;
-        // 需要优化的时间为waypts数量+1
+        // 需要优化的时间为waypts数量*2+1
+        // ini-----f1----[w1]----f2------[w2]----f3-----[w3]---f4--fin
         dimFreeT = (waypts.size() + 1) * 2;
         dimFreeP = (waypts.size() + 1) * 3;
         coarseN = (waypts.size() + 1) * 2;
@@ -1120,11 +1121,13 @@ public:
     inline double optimize(Trajectory &traj,
                            double &relCostTol) {
 
-        /*        cout<<"iniState===============\n "<< iState<<endl;
+        /*
+                cout<<"iniState===============\n "<< iState<<endl;
                 for(int i = 0 ; i < wayPts.size() ; i++){
                     cout<< "Waypts "<<i<<" :"<<wayPts[i].transpose()<<endl;
-                }g
-                cout<<"finState===============\n "<< fState<<endl;*/
+                }
+                cout<<"finState===============\n "<< fState<<endl;
+        */
 
         //        fmt::print("OPT VAR NUM = {}\n",dimFreeT+dimFreeP);
         // 分配优化状态向量 尺寸等于优化时间和状态
