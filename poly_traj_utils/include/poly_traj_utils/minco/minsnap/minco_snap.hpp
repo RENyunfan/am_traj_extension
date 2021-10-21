@@ -1378,8 +1378,8 @@ public:
         lbfgs_params.past = 3;
         lbfgs_params.g_epsilon = 1.0e-16;
         lbfgs_params.min_step = 1.0e-32;
-        lbfgs_params.abs_curv_cond = 0;
-        lbfgs_params.delta = 1e-6;
+        lbfgs_params.abs_curv_cond = 1;
+        lbfgs_params.delta = 1e-5;
         //        fmt::print(fg(fmt::color::gold), " -- [DEBUG] lbfgs init success.\n");
         //        fmt::print(fg(fmt::color::azure), "\tdimFreeT = {}\n", dimFreeT);
         // 开始下降

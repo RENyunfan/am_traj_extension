@@ -48,8 +48,8 @@ void TwoPointCallback(StatePVA iState, StatePVA fState) {
     double cost;
     ros::Time backend_start_time = ros::Time::now();
     Eigen::Vector4d ww(10000000.0, 10000.0, 10000.0, 10000.0);
-    minco.setup(1000, 0.0,1e-2, iState, fState, waypts, res, itg,
-                horizhalf, vertihalf, safe_mar, velmax, tacMin, tacMax, brmax, g, ww,
+    minco.setup(1000, 0.0, 1e-2, iState, fState, waypts, res, itg,
+                velmax, tacMin, tacMax, brmax, g, ww,
                 true);
     Trajectory traj;
     int retcode = minco.optimize(traj, cost);
@@ -79,12 +79,9 @@ void TwoPointCallback(StatePVA iState, StatePVA fState) {
 }
 
 void MultiPointCallback(vector<Vec3> waypts) {
-    double res = INFINITY;
     int itg = 10;
-    double horizhalf = 0.25;
-    double vertihalf = 0.15;
-    double safe_mar = 0.25;
     double velmax = 5;
+    double accmax = 10;
     double tacMax = 15;
     double tacMin = 3;
     double brmax = 3;
@@ -103,8 +100,8 @@ void MultiPointCallback(vector<Vec3> waypts) {
 
     Eigen::Vector4d ww(10000000.0, 10000.0, 10000.0, 10000.0);
     ros::Time backend_start_time = ros::Time::now();
-    minco.setup(1000, 0.0,smo, iState, fState, waypts_no, res, itg,
-                horizhalf, vertihalf, safe_mar, velmax, tacMin, tacMax, brmax, g, ww,
+    minco.setup(1000, 0.0, smo, iState, fState, waypts_no, itg,
+                velmax, accmax, tacMin, tacMax, brmax, g, ww,
                 true);
     cost = minco.optimize(traj, cost);
     double t = (ros::Time::now() - backend_start_time).toSec() * 1000;
@@ -130,37 +127,54 @@ void MultiPointCallback(vector<Vec3> waypts) {
 
 
     /*=============================================*/
-//    {
-//        double res = INFINITY;
-//        int itg = 12;
-//        double smoEps = 1.0e-4;
-//        double cost;
-//        ros::Time backend_start_time = ros::Time::now();
-//        Vec3 chi(1000, 1000, 1000);
-//        StatePVAJ istate, fstate;
-//        istate.col(0) = iState.col(0);
-//        fstate.col(0) = fState.col(0);
-//        qnm.setup(1000.0, 1.0, istate, fstate, waypts_no, res, itg, velmax, 100, smoEps, chi, true,
-//                  false);
-//        cost = qnm.optimize(traj, cost);
-//        double t = (ros::Time::now() - backend_start_time).toSec() * 1000;
-//        fmt::print(fg(fmt::color::cadet_blue), " -- [PLANNER] MINCO optimize success!\n");
-//        fmt::print(fg(fmt::color::light_green), "\t\tTotal backedn-time:\t{:0.3} ms.\n", t);
-//        fmt::print(fg(fmt::color::light_green), "\t\tBackend duration:\t{0:.3} s.\n",
-//                   traj.getTotalDuration());
-//        fmt::print(fg(fmt::color::light_green), "\t\tBackend Max vel:\t{0:.3} m/s.\n",
-//                   traj.getMaxVelRate());
-//        fmt::print(fg(fmt::color::light_green), "\t\tBackend Max acc:\t{0:.3} m/s.\n",
-//                   traj.getMaxAccRate());
-//        fmt::print(fg(fmt::color::light_green), "\t\tBackend Cost:\t{0:.3}\n",
-//                   cost);
-//
-//        VisualUtils::PublishTrajPosiToMarkerArray(mkr_pub2, traj, BLUE);
-//        VisualUtils::PublishTrajVelToMarkerArray(mkr_pub2, traj);
-//        VisualUtils::PublishTrajAccToMarkerArray(mkr_pub2, traj);
-//        VisualUtils::PublishTrajJerkToMarkerArray(mkr_pub2, traj);
-//
-//    }
+    {
+        int itg = 10;
+        double velmax = 5;
+        double accmax = 10;
+        double tacMax = -1;
+        double tacMin = -1;
+        double brmax = -1;
+        double g = 9.81;
+        double smo = 1e-2;
+        double cost;
+        StatePVA iState, fState;
+        iState << waypts[0], Vec3(0, 0, 0), Vec3(0, 0, 0);
+        fState << waypts[waypts.size() - 1], Vec3(0, 0, 0), Vec3(0, 0, 0);
+
+        vector<Vec3> waypts_no;
+        for (int i = 1; i < waypts.size() - 1; i++) {
+            waypts_no.push_back(waypts[i]);
+        }
+        Trajectory traj;
+
+        Eigen::Vector4d ww(10000000.0, 10000.0, 10000.0, 10000.0);
+        ros::Time backend_start_time = ros::Time::now();
+        minco.setup(1000, 0.0, smo, iState, fState, waypts_no, itg,
+                    velmax, accmax, tacMin, tacMax, brmax, g, ww,
+                    true);
+        cost = minco.optimize(traj, cost);
+        double t = (ros::Time::now() - backend_start_time).toSec() * 1000;
+        vector<Vec3> inp = minco.getInnerPts();
+        vector<Vec3> iinp = minco.getInitInnerPts();
+        fmt::print(fg(fmt::color::cadet_blue), " -- [PLANNER] MINCO optimize success!\n");
+        fmt::print(fg(fmt::color::light_green), "\t\tTotal backedn-time:\t{:0.3} ms.\n", t);
+        fmt::print(fg(fmt::color::light_green), "\t\tBackend duration:\t{0:.3} s.\n",
+                   traj.getTotalDuration());
+        fmt::print(fg(fmt::color::light_green), "\t\tBackend Max vel:\t{0:.3} m/s.\n",
+                   traj.getMaxVelRate());
+        fmt::print(fg(fmt::color::light_green), "\t\tBackend Max acc:\t{0:.3} m/s.\n",
+                   traj.getMaxAccRate());
+        fmt::print(fg(fmt::color::light_green), "\t\tBackend Cost:\t{0:.3}\n",
+                   cost);
+
+        VisualUtils::PublishTrajPosiToMarkerArray(mkr_pub2, traj,BLUE);
+        VisualUtils::PublishTrajVelToMarkerArray(mkr_pub2, traj);
+        VisualUtils::PublishTrajAccToMarkerArray(mkr_pub2, traj);
+        VisualUtils::PublishTrajJerkToMarkerArray(mkr_pub2, traj);
+        VisualUtils::PublishVectorVec3ToMarkerArray(mkr_pub2, inp);
+        VisualUtils::PublishVectorVec3ToMarkerArray(mkr_pub2, iinp, GREENYELLOW, "init_p");
+
+    }
 
 
 }

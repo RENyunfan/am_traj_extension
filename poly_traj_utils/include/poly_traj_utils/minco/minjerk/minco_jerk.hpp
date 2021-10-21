@@ -227,11 +227,8 @@ private:
 
     template<typename EIGENVEC>
     inline void addTimeIntPenalty(const Eigen::VectorXi cons,
-                                  const Eigen::VectorXi &idxHs,
-                                  const std::vector<Eigen::MatrixXd> &cfgHs,
-                                  const Eigen::Vector3d &ellipsoid,
-                                  const double safeMargin,
                                   const double vMax,
+                                  const double aMax,
                                   const double thrAccMin,
                                   const double thrAccMax,
                                   const double bdrMax,
@@ -240,9 +237,9 @@ private:
                                   double &cost,
                                   EIGENVEC &gdT,
                                   Eigen::MatrixXd &gdC) const {
-//        TimeConsuming t__("addTimeIntPenalty");
         double pena = 0.0;
         const double vMaxSqr = vMax * vMax;
+        const double aMaxSqr = aMax * aMax;
         const double thrAccMinSqr = thrAccMin * thrAccMin;
         const double thrAccMaxSqr = thrAccMax * thrAccMax;
         const double bdrMaxSqr = bdrMax * bdrMax;
@@ -251,26 +248,25 @@ private:
         double step, alpha;
         double s1, s2, s3, s4, s5;
         Eigen::Matrix<double, 6, 1> beta0, beta1, beta2, beta3, beta4;
-        int K;
+
         Eigen::Matrix3d rotM;
-        double signedDist, signedDistSqr, signedDistCub;
-        double gradSignedDt;
+
         Eigen::Vector3d h, zB, czB, xC, yB, xB;
         Eigen::Matrix3d dnczB, dzB, cdzB, dyB, dxB;
         Eigen::Vector3d outerNormal, point;
-        double eNorm;
+
         Eigen::Vector3d eNormGd;
         Eigen::Matrix3d gradSdTxyz;
         Eigen::Vector3d gradSdT;
-        double outerNormaldVel;
+
         Eigen::Matrix<double, 6, 3> gradSdCx, gradSdCy, gradSdCz, gradSdC;
         Eigen::Matrix<double, 6, 3> beta2dOuterNormalTp, beta0dOuterNormalTp;
 
-        double violaVel, violaThrl, violaThrh, violaBdr;
-        double violaVelPenaD, violaThrlPenaD, violaThrhPenaD, violaBdrPenaD;
-        double violaVelPena, violaThrlPena, violaThrhPena, violaBdrPena;
-        Eigen::Matrix<double, 6, 3> gradViolaVc, gradViolaThrlc, gradViolaThrhc, gradViolaBdrc;
-        double gradViolaVt, gradViolaThrlt, gradViolaThrht, gradViolaBdrt;
+        double violaVel, violaAcc, violaThrl, violaThrh, violaBdr;
+        double violaVelPenaD, violaAccPenaD, violaThrlPenaD, violaThrhPenaD, violaBdrPenaD;
+        double violaVelPena, violaAccPena, violaThrlPena, violaThrhPena, violaBdrPena;
+        Eigen::Matrix<double, 6, 3> gradViolaVc, gradViolaAc, gradViolaThrlc, gradViolaThrhc, gradViolaBdrc;
+        double gradViolaVt,gradViolaAt, gradViolaThrlt, gradViolaThrht, gradViolaBdrt;
         double fThr, sqrMagThr, sqrMagBdr;
         Eigen::Vector3d dfThr, dSqrMagThr, bdr, xyBdr;
         Eigen::Vector3d dSqrMagBdr, rotTrDotJer;
@@ -279,7 +275,7 @@ private:
         Eigen::Matrix3d dJerBdr, dJerxyBdr;
         double omg;
 
-        int innerLoop, idx;
+        int innerLoop;
         for (int i = 0; i < N; i++) {
             const auto &c = b.block<6, 3>(i * 6, 0);
             step = T1(i) / cons(i);
@@ -296,144 +292,125 @@ private:
                 beta3 << 0.0, 0.0, 0.0, 6.0, 24.0 * s1, 60.0 * s2;
                 beta4 << 0.0, 0.0, 0.0, 0.0, 24.0, 120.0 * s1;
                 alpha = 1.0 / cons(i) * j;
-                pos = c.transpose() * beta0;//c_0->c_5
+
                 vel = c.transpose() * beta1;
                 acc = c.transpose() * beta2;
                 jer = c.transpose() * beta3;
                 sna = c.transpose() * beta4;
 
-                h = acc;
-                h(2) += gAcc;
-                normalizeFDF(h, zB, dzB);
-                //Zb
-                czB << 0.0, zB(2), -zB(1);
-                cdzB << Eigen::RowVector3d::Zero(), dzB.row(2), -dzB.row(1);
-                normalizeFDF(czB, yB, dnczB);
-                //Yb
-                xB = yB.cross(zB);
-                dyB = dnczB * cdzB;
-                dxB.col(0) = dyB.col(0).cross(zB) + yB.cross(dzB.col(0));
-                dxB.col(1) = dyB.col(1).cross(zB) + yB.cross(dzB.col(1));
-                dxB.col(2) = dyB.col(2).cross(zB) + yB.cross(dzB.col(2));
-                rotM << xB, yB, zB;
+                if(bdrMax<0 && thrAccMax < 0 && thrAccMin < 0 ){
 
-                gradSdTxyz.col(0) = dxB * jer;
-                gradSdTxyz.col(1) = dyB * jer;
-                gradSdTxyz.col(2) = dzB * jer;
+                    violaVel = vel.squaredNorm() - vMaxSqr;
+                    violaAcc = acc.squaredNorm() - aMaxSqr;
+                    omg = (j == 0 || j == innerLoop - 1) ? 0.5 : 1.0;
 
-                fThr = h.norm();
-                dfThr = h / fThr;
-                sqrMagThr = fThr * fThr;
-                dSqrMagThr = 2 * h;
-                rotTrDotJer = rotM.transpose() * jer;
-                bdr = rotTrDotJer / fThr;
-                xyBdr << -bdr(1), bdr(0), 0.0;
-                sqrMagBdr = xyBdr.squaredNorm();
-                dBdr = -rotTrDotJer * dfThr.transpose() / (fThr * fThr) -
-                       rotM.transpose() * (dxB * rotTrDotJer(0) + dyB * rotTrDotJer(1) + dzB * rotTrDotJer(2)) / fThr;
-                dxyBdr << -dBdr.row(1), dBdr.row(0), Eigen::RowVector3d::Zero();
-                dSqrMagBdr = 2.0 * xyBdr.transpose() * dxyBdr;
-                dJerBdr = rotM.transpose() / fThr;
-                dJerxyBdr << -dJerBdr.row(1), dJerBdr.row(0), Eigen::RowVector3d::Zero();
-                dJerSqrMagBdr = 2.0 * xyBdr.transpose() * dJerxyBdr;
+                    if (violaVel > 0.0) {
+                        positiveSmoothedL1(violaVel, violaVelPena, violaVelPenaD);
+                        gradViolaVc = 2.0 * beta1 * vel.transpose();
+                        gradViolaVt = 2.0 * alpha * vel.transpose() * acc;
+                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(1) * violaVelPenaD * gradViolaVc;
+                        gdT(i) += omg * (ci(1) * violaVelPenaD * gradViolaVt * step +
+                                ci(1) * violaVelPena / cons(i));
+                        pena += omg * step * ci(1) * violaVelPena;
+                    }
 
-                violaVel = vel.squaredNorm() - vMaxSqr;
-                violaThrl = thrAccMinSqr - sqrMagThr;
-                violaThrh = sqrMagThr - thrAccMaxSqr;
-                violaBdr = sqrMagBdr - bdrMaxSqr;
+                    if (violaAcc > 0.0) {
+                        positiveSmoothedL1(violaAcc, violaAccPena, violaAccPenaD);
+                        gradViolaAc = 2.0 * beta2 * acc.transpose();
+                        gradViolaAt = 2.0 * alpha * acc.transpose() * jer;
+                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaAccPenaD * gradViolaAc;
+                        gdT(i) += omg * (ci(2) * violaAccPenaD * gradViolaAt * step +
+                                ci(2) * violaAccPena / cons(i));
+                        pena += omg * step * ci(2) * violaAccPena;
+                    }
 
-                omg = (j == 0 || j == innerLoop - 1) ? 0.5 : 1.0;
+                }else{
 
-//                idx = idxHs(i);
-//                K = cfgHs[idx].cols();
-//                for (int k = 0; k < K; k++) {
-//                    outerNormal = cfgHs[idx].col(k).head<3>();
-//                    point = cfgHs[idx].col(k).tail<3>();
-//                    beta0dOuterNormalTp = beta0 * outerNormal.transpose();
-//                    gradSdT = gradSdTxyz.transpose() * outerNormal;
-//                    outerNormaldVel = outerNormal.dot(vel);
-//                    beta2dOuterNormalTp = beta2 * outerNormal.transpose();
-//                    gradSdCx = beta2dOuterNormalTp * dxB;
-//                    gradSdCy = beta2dOuterNormalTp * dyB;
-//                    gradSdCz = beta2dOuterNormalTp * dzB;
-//
-//                    eNormGd = (rotM.transpose() * outerNormal).array() * ellipsoid.array();
-//                    eNorm = eNormGd.norm();
-//                    eNormGd /= eNorm;
-//                    signedDist = outerNormal.dot(pos - point) + eNorm;
-//                    eNormGd.array() *= ellipsoid.array();
-//
-//                    signedDist += safeMargin;
-//                    if (signedDist > 0) {
-//                        signedDistSqr = signedDist * signedDist;
-//                        signedDistCub = signedDist * signedDistSqr;
-//                        gradSdC = beta0dOuterNormalTp +
-//                                  gradSdCx * eNormGd(0) +
-//                                  gradSdCy * eNormGd(1) +
-//                                  gradSdCz * eNormGd(2);
-//                        gradSignedDt = alpha * (outerNormaldVel +
-//                                                gradSdT(0) * eNormGd(0) +
-//                                                gradSdT(1) * eNormGd(1) +
-//                                                gradSdT(2) * eNormGd(2));
-//                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(0) * 3.0 * signedDistSqr * gradSdC;
-//                        gdT(i) += omg * ci(0) * (3.0 * signedDistSqr * gradSignedDt * step + signedDistCub / cons(i));
-//                        pena += omg * step * ci(0) * signedDistCub;
-//                    }
-//                }
+                    h = acc;
+                    h(2) += gAcc;
+                    normalizeFDF(h, zB, dzB);
+                    //Zb
+                    czB << 0.0, zB(2), -zB(1);
+                    cdzB << Eigen::RowVector3d::Zero(), dzB.row(2), -dzB.row(1);
+                    normalizeFDF(czB, yB, dnczB);
+                    //Yb
+                    xB = yB.cross(zB);
+                    dyB = dnczB * cdzB;
+                    dxB.col(0) = dyB.col(0).cross(zB) + yB.cross(dzB.col(0));
+                    dxB.col(1) = dyB.col(1).cross(zB) + yB.cross(dzB.col(1));
+                    dxB.col(2) = dyB.col(2).cross(zB) + yB.cross(dzB.col(2));
+                    rotM << xB, yB, zB;
 
-                if (violaVel > 0.0) {
-//                    violaVelPenaD = violaVel * violaVel;
-//                    violaVelPena = violaVelPenaD * violaVel;
-//                    violaVelPenaD *= 3.0;
-                    positiveSmoothedL1(violaVel, violaVelPena, violaVelPenaD);
-                    gradViolaVc = 2.0 * beta1 * vel.transpose();
-                    gradViolaVt = 2.0 * alpha * vel.transpose() * acc;
-                    gdC.block<6, 3>(i * 6, 0) += omg * step * ci(1) * violaVelPenaD * gradViolaVc;
-                    gdT(i) += omg * (ci(1) * violaVelPenaD * gradViolaVt * step +
-                                     ci(1) * violaVelPena / cons(i));
-                    pena += omg * step * ci(1) * violaVelPena;
+                    gradSdTxyz.col(0) = dxB * jer;
+                    gradSdTxyz.col(1) = dyB * jer;
+                    gradSdTxyz.col(2) = dzB * jer;
+
+                    fThr = h.norm();
+                    dfThr = h / fThr;
+                    sqrMagThr = fThr * fThr;
+                    dSqrMagThr = 2 * h;
+                    rotTrDotJer = rotM.transpose() * jer;
+                    bdr = rotTrDotJer / fThr;
+                    xyBdr << -bdr(1), bdr(0), 0.0;
+                    sqrMagBdr = xyBdr.squaredNorm();
+                    dBdr = -rotTrDotJer * dfThr.transpose() / (fThr * fThr) -
+                            rotM.transpose() * (dxB * rotTrDotJer(0) + dyB * rotTrDotJer(1) + dzB * rotTrDotJer(2)) / fThr;
+                    dxyBdr << -dBdr.row(1), dBdr.row(0), Eigen::RowVector3d::Zero();
+                    dSqrMagBdr = 2.0 * xyBdr.transpose() * dxyBdr;
+                    dJerBdr = rotM.transpose() / fThr;
+                    dJerxyBdr << -dJerBdr.row(1), dJerBdr.row(0), Eigen::RowVector3d::Zero();
+                    dJerSqrMagBdr = 2.0 * xyBdr.transpose() * dJerxyBdr;
+
+                    violaVel = vel.squaredNorm() - vMaxSqr;
+                    violaThrl = thrAccMinSqr - sqrMagThr;
+                    violaThrh = sqrMagThr - thrAccMaxSqr;
+                    violaBdr = sqrMagBdr - bdrMaxSqr;
+
+                    omg = (j == 0 || j == innerLoop - 1) ? 0.5 : 1.0;
+
+
+                    if (violaThrl > 0.0) {
+                        positiveSmoothedL1(violaThrl, violaThrlPena, violaThrlPenaD);
+                        gradViolaThrlc = -beta2 * dSqrMagThr.transpose();
+                        gradViolaThrlt = -alpha * dSqrMagThr.transpose() * jer;
+                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaThrlPenaD * gradViolaThrlc;
+                        gdT(i) += omg * (ci(2) * violaThrlPenaD * gradViolaThrlt * step +
+                                ci(2) * violaThrlPena / cons(i));
+                        pena += omg * step * ci(2) * violaThrlPena;
+                    }
+
+                    if (violaThrh > 0.0) {
+                        positiveSmoothedL1(violaThrh, violaThrhPena, violaThrhPenaD);
+                        gradViolaThrhc = beta2 * dSqrMagThr.transpose();
+                        gradViolaThrht = alpha * dSqrMagThr.transpose() * jer;
+                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaThrhPenaD * gradViolaThrhc;
+                        gdT(i) += omg * (ci(2) * violaThrhPenaD * gradViolaThrht * step +
+                                ci(2) * violaThrhPena / cons(i));
+                        pena += omg * step * ci(2) * violaThrhPena;
+                    }
+
+                    if (violaBdr > 0.0) {
+                        positiveSmoothedL1(violaBdr, violaBdrPena, violaBdrPenaD);
+                        gradViolaBdrc = beta2 * dSqrMagBdr.transpose() + beta3 * dJerSqrMagBdr.transpose();
+                        gradViolaBdrt = alpha * (dSqrMagBdr.dot(jer) + dJerSqrMagBdr.dot(sna));
+                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(3) * violaBdrPenaD * gradViolaBdrc;
+                        gdT(i) += omg * (ci(3) * violaBdrPenaD * gradViolaBdrt * step +
+                                ci(3) * violaBdrPena / cons(i));
+                        pena += omg * step * ci(3) * violaBdrPena;
+                    }
+
+                    if (violaVel > 0.0) {
+                        positiveSmoothedL1(violaVel, violaVelPena, violaVelPenaD);
+                        gradViolaVc = 2.0 * beta1 * vel.transpose();
+                        gradViolaVt = 2.0 * alpha * vel.transpose() * acc;
+                        gdC.block<6, 3>(i * 6, 0) += omg * step * ci(1) * violaVelPenaD * gradViolaVc;
+                        gdT(i) += omg * (ci(1) * violaVelPenaD * gradViolaVt * step +
+                                ci(1) * violaVelPena / cons(i));
+                        pena += omg * step * ci(1) * violaVelPena;
+
+                    }
 
                 }
-
-                if (violaThrl > 0.0) {
-//                    violaThrlPenaD = violaThrl * violaThrl;
-//                    violaThrlPena = violaThrlPenaD * violaThrl;
-//                    violaThrlPenaD *= 3.0;
-                    positiveSmoothedL1(violaThrl, violaThrlPena, violaThrlPenaD);
-                    gradViolaThrlc = -beta2 * dSqrMagThr.transpose();
-                    gradViolaThrlt = -alpha * dSqrMagThr.transpose() * jer;
-                    gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaThrlPenaD * gradViolaThrlc;
-                    gdT(i) += omg * (ci(2) * violaThrlPenaD * gradViolaThrlt * step +
-                                     ci(2) * violaThrlPena / cons(i));
-                    pena += omg * step * ci(2) * violaThrlPena;
-                }
-
-                if (violaThrh > 0.0) {
-//                    violaThrhPenaD = violaThrh * violaThrh;
-//                    violaThrhPena = violaThrhPenaD * violaThrh;
-//                    violaThrhPenaD *= 3.0;
-                    positiveSmoothedL1(violaThrh, violaThrhPena, violaThrhPenaD);
-                    gradViolaThrhc = beta2 * dSqrMagThr.transpose();
-                    gradViolaThrht = alpha * dSqrMagThr.transpose() * jer;
-                    gdC.block<6, 3>(i * 6, 0) += omg * step * ci(2) * violaThrhPenaD * gradViolaThrhc;
-                    gdT(i) += omg * (ci(2) * violaThrhPenaD * gradViolaThrht * step +
-                                     ci(2) * violaThrhPena / cons(i));
-                    pena += omg * step * ci(2) * violaThrhPena;
-                }
-
-                if (violaBdr > 0.0) {
-//                    violaBdrPenaD = violaBdr * violaBdr;
-//                    violaBdrPena = violaBdrPenaD * violaBdr;
-//                    violaBdrPenaD *= 3.0;
-                    positiveSmoothedL1(violaBdr, violaBdrPena, violaBdrPenaD);
-                    gradViolaBdrc = beta2 * dSqrMagBdr.transpose() + beta3 * dJerSqrMagBdr.transpose();
-                    gradViolaBdrt = alpha * (dSqrMagBdr.dot(jer) + dJerSqrMagBdr.dot(sna));
-                    gdC.block<6, 3>(i * 6, 0) += omg * step * ci(3) * violaBdrPenaD * gradViolaBdrc;
-                    gdT(i) += omg * (ci(3) * violaBdrPenaD * gradViolaBdrt * step +
-                                     ci(3) * violaBdrPena / cons(i));
-                    pena += omg * step * ci(3) * violaBdrPena;
-                }
-
                 s1 += step;
             }
         }
@@ -553,11 +530,8 @@ public:
 
     template<typename EIGENVEC, typename EIGENMAT>
     inline void evalTrajCostGrad(const Eigen::VectorXi &cons,
-                                 const Eigen::VectorXi &idxHs,
-                                 const std::vector<Eigen::MatrixXd> &cfgHs,
-                                 const Eigen::Vector3d &ellipsoid,
-                                 const double &safeMargin,
                                  const double &vMax,
+                                 const double &aMax,
                                  const double &thrAccMin,
                                  const double &thrAccMax,
                                  const double &bdrMax,
@@ -566,6 +540,7 @@ public:
                                  double &cost,
                                  EIGENVEC &gdT,
                                  EIGENMAT &gdInPs) {
+//        TimeConsuming t__("evalTrajCostGrad");
         gdT.setZero();
         gdInPs.setZero();
         gdC.setZero();
@@ -574,8 +549,7 @@ public:
         addGradJbyT(gdT);
         addGradJbyC(gdC);
 
-        addTimeIntPenalty(cons, idxHs, cfgHs, ellipsoid, safeMargin,
-                          vMax, thrAccMin, thrAccMax, bdrMax,
+        addTimeIntPenalty(cons, vMax, aMax, thrAccMin, thrAccMax, bdrMax,
                           gAcc, ci, cost, gdT, gdC);
 
         solveAdjGradC(gdC);
@@ -650,7 +624,7 @@ private:
 
     Eigen::Vector3d ellipsoid;
     double safeMargin;
-    double vMax;
+    double vMax, aMax;
     double thrAccMin;
     double thrAccMax;
     double bdrMax;
@@ -974,8 +948,7 @@ private:
 
         double cost;
         obj.jerkOpt.generate(obj.innerP, obj.freeT);
-        obj.jerkOpt.evalTrajCostGrad(obj.cons, obj.idxHs, obj.cfgHs, obj.ellipsoid,
-                                     obj.safeMargin, obj.vMax, obj.thrAccMin,
+        obj.jerkOpt.evalTrajCostGrad(obj.cons, obj.vMax, obj.aMax,obj.thrAccMin,
                                      obj.thrAccMax, obj.bdrMax, obj.gAcc, obj.chi,
                                      cost, proxyGradT, obj.gdInPs);
 
@@ -996,7 +969,7 @@ private:
         gradt = proxyGradT.head(dimT);
 
 //        cout<<std::setprecision(5)<< "it = " << iter_num++<<" gradT = "<<gradt.transpose()<<"\tgradP = "<<gradp.transpose()<<" freep = "<<p.transpose()<<" freet = "<<t.transpose()<<endl;
-        Eigen::VectorXd curlog((dimT + dimP) * 2);
+
         obj.cntpp();
         return cost;
     }
@@ -1009,12 +982,9 @@ public:
                       const StatePVA &iniState,
                       const StatePVA &finState,
                       const vector<Vec3> waypts,
-                      const double &gridRes,
                       const int &itgSpaces,
-                      const double &horiHalfLen,
-                      const double &vertHalfLen,
-                      const double &margin,
                       const double &vm,
+                      const double &am,
                       const double &minThrAcc,
                       const double &maxThrAcc,
                       const double &bodyRateMax,
@@ -1044,11 +1014,8 @@ public:
         freeT.resize(dimFreeT);
 
         chi = w;
-        ellipsoid(0) = horiHalfLen;
-        ellipsoid(1) = horiHalfLen;
-        ellipsoid(2) = vertHalfLen;
-        safeMargin = margin;
         vMax = vm;
+        aMax = am;
         thrAccMin = minThrAcc;
         thrAccMax = maxThrAcc;
         bdrMax = bodyRateMax;
@@ -1177,7 +1144,7 @@ public:
         lbfgs_params.g_epsilon = 1.0e-16;
         lbfgs_params.min_step = 1.0e-32;
         lbfgs_params.abs_curv_cond = 1;
-        lbfgs_params.delta = 1e-5;
+        lbfgs_params.delta = 1e-4;
         //        fmt::print(fg(fmt::color::gold), " -- [DEBUG] lbfgs init success.\n");
         //        fmt::print(fg(fmt::color::azure), "\tdimFreeT = {}\n", dimFreeT);
         // 开始下降
